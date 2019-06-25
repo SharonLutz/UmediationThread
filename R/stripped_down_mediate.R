@@ -4,6 +4,27 @@ stripped.down.mediate <-
   function(model.m, model.y, sims = 1000, treat = "treat.name", mediator = "med.name",
            conf.level = .95, control.value = 0, treat.value = 1){
   
+  # Model type indicators
+  isGam.y <- inherits(model.y, "gam")
+  isGam.m <- inherits(model.m, "gam")
+  isGlm.y <- inherits(model.y, "glm")  # Note gam and bayesglm also inherits "glm"
+  isGlm.m <- inherits(model.m, "glm")  # Note gam and bayesglm also inherits "glm"
+  isLm.y <- inherits(model.y, "lm")    # Note gam, glm and bayesglm also inherit "lm"
+  isLm.m <- inherits(model.m, "lm")    # Note gam, glm and bayesglm also inherit "lm"
+  isVglm.y <- inherits(model.y, "vglm")
+  isRq.y <- inherits(model.y, "rq")
+  isRq.m <- inherits(model.m, "rq")
+  isOrdered.y <- inherits(model.y, "polr")  # Note bayespolr also inherits "polr"
+  isOrdered.m <- inherits(model.m, "polr")  # Note bayespolr also inherits "polr"
+  isSurvreg.y <- inherits(model.y, "survreg")
+  isSurvreg.m <- inherits(model.m, "survreg")
+  isMer.y <- inherits(model.y, "merMod") # Note lmer and glmer do not inherit "lm" and "glm"
+  isMer.m <- inherits(model.m, "merMod") # Note lmer and glmer do not inherit "lm" and "glm"
+  
+  if(isGlm.m){
+    FamilyM <- model.m$family$family
+  }
+  
   # Model frames for M and Y models
   m.data <- model.frame(model.m)  # Call.M$data
   y.data <- model.frame(model.y)  # Call.Y$data
@@ -32,8 +53,18 @@ stripped.down.mediate <-
   # Extracting weights from models
   weights.m <- model.weights(m.data)
   weights.y <- model.weights(y.data)
-  weights.m <- rep(1,nrow(m.data))
-  weights.y <- rep(1,nrow(y.data))
+  
+  if(!is.null(weights.m) && isGlm.m && FamilyM == "binomial"){
+    message("weights taken as sampling weights, not total number of trials")
+  }
+  
+  if(is.null(weights.m)){
+    weights.m <- rep(1,nrow(m.data))
+  }
+  if(is.null(weights.y)){
+    weights.y <- rep(1,nrow(y.data))
+  }
+  
   weights <- weights.m
   
   cat.0 <- control.value
@@ -76,14 +107,51 @@ stripped.down.mediate <-
   mmat.t <- model.matrix(terms(model.m), data=pred.data.t)
   mmat.c <- model.matrix(terms(model.m), data=pred.data.c)
   
-  sigma <- summary(model.m)$sigma
-  error <- rnorm(sims*n, mean=0, sd=sigma)
-  muM1 <- tcrossprod(MModel, mmat.t)
-  muM0 <- tcrossprod(MModel, mmat.c)
-  PredictM1 <- muM1 + matrix(error, nrow=sims)
-  PredictM0 <- muM0 + matrix(error, nrow=sims)
+  if(isGlm.m){
+    muM1 <- model.m$family$linkinv(tcrossprod(MModel, mmat.t))
+    muM0 <- model.m$family$linkinv(tcrossprod(MModel, mmat.c))
+    
+    if(FamilyM == "poisson"){
+      PredictM1 <- matrix(rpois(sims*n, lambda = muM1), nrow = sims)
+      PredictM0 <- matrix(rpois(sims*n, lambda = muM0), nrow = sims)
+    } else if (FamilyM == "Gamma") {
+      shape <- gamma.shape(model.m)$alpha
+      PredictM1 <- matrix(rgamma(n*sims, shape = shape,
+                                 scale = muM1/shape), nrow = sims)
+      PredictM0 <- matrix(rgamma(n*sims, shape = shape,
+                                 scale = muM0/shape), nrow = sims)
+    } else if (FamilyM == "binomial"){
+      PredictM1 <- matrix(rbinom(n*sims, size = 1,
+                                 prob = muM1), nrow = sims)
+      PredictM0 <- matrix(rbinom(n*sims, size = 1,
+                                 prob = muM0), nrow = sims)
+    } else if (FamilyM == "gaussian"){
+      sigma <- sqrt(summary(model.m)$dispersion)
+      error <- rnorm(sims*n, mean=0, sd=sigma)
+      PredictM1 <- muM1 + matrix(error, nrow=sims)
+      PredictM0 <- muM0 + matrix(error, nrow=sims)
+    } else if (FamilyM == "inverse.gaussian"){
+      disp <- summary(model.m)$dispersion
+      PredictM1 <- matrix(SuppDists::rinvGauss(n*sims, nu = muM1,
+                                               lambda = 1/disp), nrow = sims)
+      PredictM0 <- matrix(SuppDists::rinvGauss(n*sims, nu = muM0,
+                                               lambda = 1/disp), nrow = sims)
+    } else {
+      stop("unsupported glm family")
+    }
+    
+  }### Case I-1-c: Linear
+  } else if(isLm.m){
+    sigma <- summary(model.m)$sigma
+    error <- rnorm(sims*n, mean=0, sd=sigma)
+    muM1 <- tcrossprod(MModel, mmat.t)
+    muM0 <- tcrossprod(MModel, mmat.c)
+    PredictM1 <- muM1 + matrix(error, nrow=sims)
+    PredictM0 <- muM0 + matrix(error, nrow=sims)
+    rm(error)
+    
+  }
   
-  rm(error)
   rm(mmat.t, mmat.c)
   
   #####################################
@@ -124,6 +192,13 @@ stripped.down.mediate <-
       Pr0[,j] <- t(as.matrix(YModel[j,])) %*% t(ymat.c)
       
       rm(ymat.t, ymat.c, pred.data.t, pred.data.c)
+    }
+    
+    if(isGlm.y){
+      Pr1 <- apply(Pr1, 2, model.y$family$linkinv)
+      Pr0 <- apply(Pr0, 2, model.y$family$linkinv)
+      #logit func: log(p/(1-p))
+      #invlogit func: 1/(1+exp(-x))
     }
     
     effects.tmp[,,e] <- Pr1 - Pr0 ### e=1:mediation(1); e=2:mediation(0); e=3:direct(1); e=4:direct(0)
