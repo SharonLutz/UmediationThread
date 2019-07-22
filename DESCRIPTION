@@ -3,13 +3,36 @@ Type: Package
 Title: Runs the Umediation Function 
 Version: 1.0
 Date: 2017-02-20
-Author: Sharon Lutz, Annie Thwing
-Maintainer: Annie Thwing <annie.thwing@ucdenver.edu>
+Encoding: UTF-8
+SystemRequirements: C++11
+Authors@R: c(
+    person("Annie", "Thwing", email="annie.thwing@ucdenver.edu", role=c("aut")),
+    person("Sharon", "Lutz", email="smlutz@hsph.harvard.edu", role=c("cre","aut")),
+    person("Michael", "Gooch", email="goochmi@gmail.com", role=c("ctb","aut"))
+    )
 Description: The Umediation package runs the Umediation function which examines the role 	of unmeasured confounding on the estimates for the average causal mediated effect 	(ACME) and average direct effect (ADE) in mediation analysis. 
 License: GPL-2
+Depends: R (>= 3.5.1)
 Imports: 
     car,
     mediation,
     pbapply,
     snow,
-    parallel
+    parallel,
+    Rcpp
+URL: https://github.com/SharonLutz/Umediation
+BugReports: https://github.com/SharonLutz/Umediation/issues
+RoxygenNote: 6.1.1
+Collate: 
+    'ErrorCheck.R'
+    'RcppExports.R'
+    'Umediation-package.R'
+    'Umediation.R'
+    'mediate_s4_classes.R'
+    'mediate_with_rcpp.R'
+    'multi_process_mediate_impl.R'
+    'multi_process_mediate.R'
+    'stripped_down_mediate.R'
+LinkingTo: 
+    Rcpp,
+    RcppEigen

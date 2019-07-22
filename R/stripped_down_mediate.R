@@ -141,7 +141,8 @@ stripped.down.mediate <-
     }
     
   }### Case I-1-c: Linear
-  } else if(isLm.m){
+  #} else 
+  if(isLm.m){
     sigma <- summary(model.m)$sigma
     error <- rnorm(sims*n, mean=0, sd=sigma)
     muM1 <- tcrossprod(MModel, mmat.t)
@@ -149,7 +150,6 @@ stripped.down.mediate <-
     PredictM1 <- muM1 + matrix(error, nrow=sims)
     PredictM0 <- muM0 + matrix(error, nrow=sims)
     rm(error)
-    
   }
   
   rm(mmat.t, mmat.c)
@@ -197,8 +197,13 @@ stripped.down.mediate <-
     if(isGlm.y){
       Pr1 <- apply(Pr1, 2, model.y$family$linkinv)
       Pr0 <- apply(Pr0, 2, model.y$family$linkinv)
-      #logit func: log(p/(1-p))
-      #invlogit func: 1/(1+exp(-x))
+      #logit func representations: 
+      # log(p/(1-p))
+      # log(p) - log(1-p)
+      # -log((1/p) - 1)
+      #invlogit func representations: 
+      # 1/(1+exp(-x))
+      # exp(x) / (exp(x) + 1)
     }
     
     effects.tmp[,,e] <- Pr1 - Pr0 ### e=1:mediation(1); e=2:mediation(0); e=3:direct(1); e=4:direct(0)
