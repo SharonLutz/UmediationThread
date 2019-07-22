@@ -4,8 +4,15 @@
 #define EIGEN_DONT_PARALLELIZE
 #endif
 #include "shared_local_mediate_variables.hpp"
+#include "logit_logistic_func.hpp"
 
 SharedLocalMediateVariables::SharedLocalMediateVariables() : 
+  isGlm_M(false),
+  FamilyM_is_binomial(false),
+  M_link_is_logit(false),
+  isGlm_Y(false),
+  FamilyY_is_binomial(false),
+  Y_link_is_logit(false),
   PredictM0(0,0),
   PredictM1(0,0),
   YModel(0,0),
@@ -23,6 +30,33 @@ void SharedLocalMediateVariables::initialize_from_environment(Rcpp::Environment 
   this->cat_1 = env["cat.1"];
   this->treat = Rcpp::as<std::string>(env["treat"]);
   this->mediator = Rcpp::as<std::string>(env["mediator"]);
+  this->isGlm_M = env["isGlm.m"];
+  if(this->isGlm_M){
+    Rcpp::RObject model_m = env["model.m"];
+    Rcpp::RObject r_family_class =  model_m.attr("family");
+    std::string family_str = r_family_class.attr("family");
+    std::string link_str = r_family_class.attr("link");
+    this->FamilyM_is_binomial = family_str == "binomial";
+    this->M_link_is_logit = link_str == "logit";
+    if(!(this->FamilyM_is_binomial && this->M_link_is_logit)){
+      Rf_error("model.m is a Glm, but is not binomial with a logit link");
+    }
+  }
+  
+  
+  
+  this->isGlm_Y = env["isGlm.y"];
+  if(this->isGlm_Y){
+    Rcpp::RObject model_y = env["model.y"];
+    Rcpp::RObject r_family_class =  model_y.attr("family");
+    std::string family_str = r_family_class.attr("family");
+    std::string link_str = r_family_class.attr("link");
+    this->FamilyY_is_binomial = family_str == "binomial";
+    this->Y_link_is_logit = link_str == "logit";
+    if(!(this->FamilyY_is_binomial && this->Y_link_is_logit)){
+      Rf_error("model.y is a Glm, but is not binomial with a logit link");
+    }
+  }
   
   this->PredictM0 = env["PredictM0"];
   this->PredictM1 = env["PredictM1"];
@@ -67,9 +101,16 @@ void test(Rcpp::Environment & env){
   Rcpp::Rcout << sv.y_data << std::endl;
 }
 
-void SharedLocalMediateVariables::store_result_diff(Eigen::MatrixXd Pr1, Eigen::MatrixXd Pr0, std::size_t e){
+void SharedLocalMediateVariables::store_result_diff(Eigen::MatrixXd &Pr1, Eigen::MatrixXd &Pr0, std::size_t e){
   // Rcpp::Rcout << (Pr1(0,0) - Pr0(0,0)) << std::endl;
   // Rcpp::Rcout << (Pr1 - Pr0) << std::endl;
+  
+  // check for GLM, binomial, logit in model.y
+  if(this->FamilyY_is_binomial){
+    // TODO: if so, apply logistic(a) to Pr0 and Pr1
+    Pr1.unaryExpr(std::ref(logistic));
+    Pr0.unaryExpr(std::ref(logistic));
+  }
   switch(e){
   default:
     Rf_error("invalid value of e");

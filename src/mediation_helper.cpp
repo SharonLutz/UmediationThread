@@ -115,6 +115,9 @@ void MediationHelper::outer_loop(std::size_t e) {
   for(int j=0; j < sv.sims; ++j){
     inner_loop(olv,j);
   }
+  
+  //TODO: if isGlm.y, apply inv.logit (logistic) to Pr1 and Pr0
+  
   // sv.effects_tmp[e] = (Pr1 - Pr0);
   sv.store_result_diff(olv.Pr1, olv.Pr0, e);
   // Rcpp::Rcout<< "outer_loop end: " << e << std::endl;
@@ -182,6 +185,9 @@ void MediationHelper::outer_loop_with_threaded_inner_loop(std::size_t e){
   for(std::size_t i=0;i<num_threads;++i){
     threads[i].join();
   }
+  
+  //TODO: if isGlm.y, apply inv.logit (logistic) to Pr1 and Pr0
+  // sv.effects_tmp[e] = (Pr1 - Pr0);
   
   sv.store_result_diff(local_vars.Pr1, local_vars.Pr0, e);
 }

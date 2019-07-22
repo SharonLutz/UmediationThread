@@ -21,6 +21,14 @@ struct SharedLocalMediateVariables {
   Eigen::Index treat_i;
   Eigen::Index mediator_i;
   std::vector<std::string> terms;
+  
+  bool isGlm_M;
+  bool FamilyM_is_binomial;
+  bool M_link_is_logit;
+  bool isGlm_Y;
+  bool FamilyY_is_binomial;
+  bool Y_link_is_logit;
+  
   std::array< std::array<int, 4>, 4 > tt_switch;
   Eigen::MatrixXd PredictM0;
   Eigen::MatrixXd PredictM1;
@@ -33,7 +41,7 @@ struct SharedLocalMediateVariables {
   Eigen::MatrixXd et4;
   SharedLocalMediateVariables();
   void initialize_from_environment(Rcpp::Environment & env);
-  void store_result_diff(Eigen::MatrixXd Pr1, Eigen::MatrixXd Pr0, std::size_t e);
+  void store_result_diff(Eigen::MatrixXd &Pr1, Eigen::MatrixXd &Pr0, std::size_t e);
   void export_results(Rcpp::Environment & env);
 };
 #endif //STRUCT_SHAREDLOCALMEDIATEVARIABLES_HPP
