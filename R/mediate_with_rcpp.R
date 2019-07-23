@@ -1,10 +1,31 @@
 #our calls always this style: mediate(model.m, model.y, treat= "X", mediator="M", sims = nSimImai)
 #both models are lm with no special types / conditions
+
 mediate_with_rcpp <- 
   function(model.m, model.y, sims = 1000, treat = "treat.name", mediator = "med.name",
            conf.level = .95, control.value = 0, treat.value = 1){
-  
   num_threads = getOption("mediate.threads", default = 1)
+  
+  # Model type indicators
+  isGam.y <- inherits(model.y, "gam")
+  isGam.m <- inherits(model.m, "gam")
+  isGlm.y <- inherits(model.y, "glm")  # Note gam and bayesglm also inherits "glm"
+  isGlm.m <- inherits(model.m, "glm")  # Note gam and bayesglm also inherits "glm"
+  isLm.y <- inherits(model.y, "lm")    # Note gam, glm and bayesglm also inherit "lm"
+  isLm.m <- inherits(model.m, "lm")    # Note gam, glm and bayesglm also inherit "lm"
+  isVglm.y <- inherits(model.y, "vglm")
+  isRq.y <- inherits(model.y, "rq")
+  isRq.m <- inherits(model.m, "rq")
+  isOrdered.y <- inherits(model.y, "polr")  # Note bayespolr also inherits "polr"
+  isOrdered.m <- inherits(model.m, "polr")  # Note bayespolr also inherits "polr"
+  isSurvreg.y <- inherits(model.y, "survreg")
+  isSurvreg.m <- inherits(model.m, "survreg")
+  isMer.y <- inherits(model.y, "merMod") # Note lmer and glmer do not inherit "lm" and "glm"
+  isMer.m <- inherits(model.m, "merMod") # Note lmer and glmer do not inherit "lm" and "glm"
+  
+  if(isGlm.m){
+    FamilyM <- model.m$family$family
+  }
   
   # Model frames for M and Y models
   m.data <- model.frame(model.m)  # Call.M$data
@@ -34,13 +55,23 @@ mediate_with_rcpp <-
   # Extracting weights from models
   weights.m <- model.weights(m.data)
   weights.y <- model.weights(y.data)
-  weights.m <- rep(1,nrow(m.data))
-  weights.y <- rep(1,nrow(y.data))
+  
+  if(!is.null(weights.m) && isGlm.m && FamilyM == "binomial"){
+    message("weights taken as sampling weights, not total number of trials")
+  }
+  
+  if(is.null(weights.m)){
+    weights.m <- rep(1,nrow(m.data))
+  }
+  if(is.null(weights.y)){
+    weights.y <- rep(1,nrow(y.data))
+  }
+  
   weights <- weights.m
   
   cat.0 <- control.value
   cat.1 <- treat.value
-
+  
   ########################################################################
   ## Case I-1: Quasi-Bayesian Monte Carlo
   ########################################################################
@@ -78,14 +109,51 @@ mediate_with_rcpp <-
   mmat.t <- model.matrix(terms(model.m), data=pred.data.t)
   mmat.c <- model.matrix(terms(model.m), data=pred.data.c)
   
-  sigma <- summary(model.m)$sigma
-  error <- rnorm(sims*n, mean=0, sd=sigma)
-  muM1 <- tcrossprod(MModel, mmat.t)
-  muM0 <- tcrossprod(MModel, mmat.c)
-  PredictM1 <- muM1 + matrix(error, nrow=sims)
-  PredictM0 <- muM0 + matrix(error, nrow=sims)
+  if(isGlm.m){
+    muM1 <- model.m$family$linkinv(tcrossprod(MModel, mmat.t))
+    muM0 <- model.m$family$linkinv(tcrossprod(MModel, mmat.c))
+    
+    if(FamilyM == "poisson"){
+      PredictM1 <- matrix(rpois(sims*n, lambda = muM1), nrow = sims)
+      PredictM0 <- matrix(rpois(sims*n, lambda = muM0), nrow = sims)
+    } else if (FamilyM == "Gamma") {
+      shape <- gamma.shape(model.m)$alpha
+      PredictM1 <- matrix(rgamma(n*sims, shape = shape,
+                                 scale = muM1/shape), nrow = sims)
+      PredictM0 <- matrix(rgamma(n*sims, shape = shape,
+                                 scale = muM0/shape), nrow = sims)
+    } else if (FamilyM == "binomial"){
+      PredictM1 <- matrix(rbinom(n*sims, size = 1,
+                                 prob = muM1), nrow = sims)
+      PredictM0 <- matrix(rbinom(n*sims, size = 1,
+                                 prob = muM0), nrow = sims)
+    } else if (FamilyM == "gaussian"){
+      sigma <- sqrt(summary(model.m)$dispersion)
+      error <- rnorm(sims*n, mean=0, sd=sigma)
+      PredictM1 <- muM1 + matrix(error, nrow=sims)
+      PredictM0 <- muM0 + matrix(error, nrow=sims)
+    } else if (FamilyM == "inverse.gaussian"){
+      disp <- summary(model.m)$dispersion
+      PredictM1 <- matrix(SuppDists::rinvGauss(n*sims, nu = muM1,
+                                               lambda = 1/disp), nrow = sims)
+      PredictM0 <- matrix(SuppDists::rinvGauss(n*sims, nu = muM0,
+                                               lambda = 1/disp), nrow = sims)
+    } else {
+      stop("unsupported glm family")
+    }
+    
+  }### Case I-1-c: Linear
+  #} else 
+  if(isLm.m){
+    sigma <- summary(model.m)$sigma
+    error <- rnorm(sims*n, mean=0, sd=sigma)
+    muM1 <- tcrossprod(MModel, mmat.t)
+    muM0 <- tcrossprod(MModel, mmat.c)
+    PredictM1 <- muM1 + matrix(error, nrow=sims)
+    PredictM0 <- muM0 + matrix(error, nrow=sims)
+    rm(error)
+  }
   
-  rm(error)
   rm(mmat.t, mmat.c)
   
   #####################################
@@ -102,6 +170,7 @@ mediate_with_rcpp <-
   delta.0 <- t(as.matrix(apply(et2, 2, weighted.mean, w=weights)))
   zeta.1 <- t(as.matrix(apply(et3, 2, weighted.mean, w=weights)))
   zeta.0 <- t(as.matrix(apply(et4, 2, weighted.mean, w=weights)))
+  rm(effects.tmp)
   
   tau <- (zeta.1 + delta.0 + zeta.0 + delta.1)/2
   nu.0 <- delta.0/tau
@@ -140,16 +209,16 @@ mediate_with_rcpp <-
   n.avg.ci <- quantile(nu.avg, c(low,high), na.rm=TRUE)
   
   # p-values
-  d0.p <- mediation:::pval(delta.0, d0)
-  d1.p <- mediation:::pval(delta.1, d1)
-  d.avg.p <- mediation:::pval(delta.avg, d.avg)
-  z0.p <- mediation:::pval(zeta.0, z0)
-  z1.p <- mediation:::pval(zeta.1, z1)
-  z.avg.p <- mediation:::pval(zeta.avg, z.avg)        
-  n0.p <- mediation:::pval(nu.0, n0)
-  n1.p <- mediation:::pval(nu.1, n1)
-  n.avg.p <- mediation:::pval(nu.avg, n.avg)
-  tau.p <- mediation:::pval(tau, tau.coef)
+  d0.p <- mediation::pval(delta.0, d0)
+  d1.p <- mediation::pval(delta.1, d1)
+  d.avg.p <- mediation::pval(delta.avg, d.avg)
+  z0.p <- mediation::pval(zeta.0, z0)
+  z1.p <- mediation::pval(zeta.1, z1)
+  z.avg.p <- mediation::pval(zeta.avg, z.avg)        
+  n0.p <- mediation::pval(nu.0, n0)
+  n1.p <- mediation::pval(nu.1, n1)
+  n.avg.p <- mediation::pval(nu.avg, n.avg)
+  tau.p <- mediation::pval(tau, tau.coef)
   
   # Detect whether models include T-M interaction
   INT <- paste(treat,mediator,sep=":") %in% attr(terms(model.y),"term.labels") |
@@ -157,4 +226,3 @@ mediate_with_rcpp <-
   
   return(SimpleMediateResult(direct_p = z.avg.p, indirect_p=d.avg.p))
 }
-
