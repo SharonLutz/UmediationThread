@@ -1,9 +1,11 @@
 #our calls always this style: mediate(model.m, model.y, treat= "X", mediator="M", sims = nSimImai)
 #both models are lm with no special types / conditions
 stripped.down.mediate <- 
-  function(model.m, model.y, sims = 1000, treat = "treat.name", mediator = "med.name",
-           conf.level = .95, control.value = 0, treat.value = 1){
-  
+  function(model.m, model.y, sims = 1000,boot = FALSE, boot.ci.type = "perc", treat = "treat.name", mediator = "med.name",covariates = NULL,
+           conf.level = .95, control.value = 0, treat.value = 1, long = TRUE,robustSE = FALSE, cluster = NULL){
+    
+  cl <- match.call()
+    
   # Model type indicators
   isGam.y <- inherits(model.y, "gam")
   isGam.m <- inherits(model.m, "gam")
@@ -260,22 +262,68 @@ stripped.down.mediate <-
   n.avg.ci <- quantile(nu.avg, c(low,high), na.rm=TRUE)
   
   # p-values
-  d0.p <- mediation::pval(delta.0, d0)
-  d1.p <- mediation::pval(delta.1, d1)
-  d.avg.p <- mediation::pval(delta.avg, d.avg)
-  z0.p <- mediation::pval(zeta.0, z0)
-  z1.p <- mediation::pval(zeta.1, z1)
-  z.avg.p <- mediation::pval(zeta.avg, z.avg)        
-  n0.p <- mediation::pval(nu.0, n0)
-  n1.p <- mediation::pval(nu.1, n1)
-  n.avg.p <- mediation::pval(nu.avg, n.avg)
-  tau.p <- mediation::pval(tau, tau.coef)
+  d0.p <- mediate_pval(delta.0, d0)
+  d1.p <- mediate_pval(delta.1, d1)
+  d.avg.p <- mediate_pval(delta.avg, d.avg)
+  z0.p <- mediate_pval(zeta.0, z0)
+  z1.p <- mediate_pval(zeta.1, z1)
+  z.avg.p <- mediate_pval(zeta.avg, z.avg)        
+  n0.p <- mediate_pval(nu.0, n0)
+  n1.p <- mediate_pval(nu.1, n1)
+  n.avg.p <- mediate_pval(nu.avg, n.avg)
+  tau.p <- mediate_pval(tau, tau.coef)
   
   # Detect whether models include T-M interaction
   INT <- paste(treat,mediator,sep=":") %in% attr(terms(model.y),"term.labels") |
     paste(mediator,treat,sep=":") %in% attr(terms(model.y),"term.labels")
   
-  return(SimpleMediateResult(direct_p = z.avg.p, indirect_p=d.avg.p))
+  if(long && !isMer.y && !isMer.m) {
+    out <- list(d0=d0, d1=d1, d0.ci=d0.ci, d1.ci=d1.ci,
+                d0.p=d0.p, d1.p=d1.p,
+                d0.sims=delta.0, d1.sims=delta.1,
+                z0=z0, z1=z1, z0.ci=z0.ci, z1.ci=z1.ci,
+                z0.p=z0.p, z1.p=z1.p,
+                z0.sims=zeta.0, z1.sims=zeta.1,
+                n0=n0, n1=n1, n0.ci=n0.ci, n1.ci=n1.ci,
+                n0.p=n0.p, n1.p=n1.p,
+                n0.sims=nu.0, n1.sims=nu.1,
+                tau.coef=tau.coef, tau.ci=tau.ci, tau.p=tau.p,
+                tau.sims=tau,
+                d.avg=d.avg, d.avg.p=d.avg.p, d.avg.ci=d.avg.ci, d.avg.sims=delta.avg,
+                z.avg=z.avg, z.avg.p=z.avg.p, z.avg.ci=z.avg.ci, z.avg.sims=zeta.avg,
+                n.avg=n.avg, n.avg.p=n.avg.p, n.avg.ci=n.avg.ci, n.avg.sims=nu.avg,
+                boot=boot, boot.ci.type=boot.ci.type,
+                treat=treat, mediator=mediator,
+                covariates=covariates,
+                INT=INT, conf.level=conf.level,
+                model.y=model.y, model.m=model.m,
+                control.value=control.value, treat.value=treat.value,
+                nobs=n, sims=sims, call=cl,
+                robustSE = robustSE, cluster = cluster)
+    class(out) <- "mediate"
+  } 
+  if(!long && !isMer.y && !isMer.m){
+    out <- list(d0=d0, d1=d1, d0.ci=d0.ci, d1.ci=d1.ci,
+                d0.p=d0.p, d1.p=d1.p,
+                z0=z0, z1=z1, z0.ci=z0.ci, z1.ci=z1.ci,
+                z0.p=z0.p, z1.p=z1.p,
+                n0=n0, n1=n1, n0.ci=n0.ci, n1.ci=n1.ci,
+                n0.p=n0.p, n1.p=n1.p,
+                tau.coef=tau.coef, tau.ci=tau.ci, tau.p=tau.p,
+                d.avg=d.avg, d.avg.p=d.avg.p, d.avg.ci=d.avg.ci,
+                z.avg=z.avg, z.avg.p=z.avg.p, z.avg.ci=z.avg.ci,
+                n.avg=n.avg, n.avg.p=n.avg.p, n.avg.ci=n.avg.ci,
+                boot=boot, boot.ci.type=boot.ci.type,
+                treat=treat, mediator=mediator,
+                covariates=covariates,
+                INT=INT, conf.level=conf.level,
+                model.y=model.y, model.m=model.m,
+                control.value=control.value, treat.value=treat.value,
+                nobs=n, sims=sims, call=cl,
+                robustSE = robustSE, cluster = cluster)
+    class(out) <- "mediate"
+  }
+  return(out)
 }
 
 export_environment <- function(env){

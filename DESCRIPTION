@@ -32,7 +32,9 @@ Collate:
     'mediate_with_rcpp.R'
     'multi_process_mediate_impl.R'
     'multi_process_mediate.R'
+    'pval.R'
     'stripped_down_mediate.R'
+    'test_mediation.R'
 LinkingTo: 
     Rcpp,
     RcppEigen
