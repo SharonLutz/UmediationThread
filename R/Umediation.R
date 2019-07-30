@@ -155,7 +155,9 @@ Umediation<-function(n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",int
       if(Ytype=="C"){out.fit<-lm(Y~M+A+CC+A*M)} #fit the model for the outcome
       if(Ytype=="D"){out.fit<-glm(Y~M+A+CC+A*M,family=binomial(link = "logit"))}
     }
-    
+    g_env = globalenv()
+    g_env[["med.fit"]] = med.fit
+    g_env[["out.fit"]] = out.fit
     if(use_cpp){
       med.out <- mediate_with_rcpp(med.fit, out.fit, treat = "A", mediator = "M",sim=nBoot)
     } else {
@@ -174,6 +176,9 @@ Umediation<-function(n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",int
       if(Ytype=="C"){out.fitU<-lm(Y~M+A+CC+U+A*M)} #fit the model for the outcome
       if(Ytype=="D"){out.fitU<-glm(Y~M+A+CC+U+A*M,family=binomial(link = "logit"))}
     }
+    
+    g_env[["med.fitU"]] = med.fitU
+    g_env[["out.fitU"]] = out.fitU
     
     if(use_cpp){
       med.outU <- mediate_with_rcpp(med.fitU, out.fitU, treat = "A", mediator = "M",sim=nBoot)

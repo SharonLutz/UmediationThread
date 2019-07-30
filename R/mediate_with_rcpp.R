@@ -145,9 +145,8 @@ mediate_with_rcpp <-
       stop("unsupported glm family")
     }
     
-  }### Case I-1-c: Linear
-  #} else 
-  if(isLm.m){
+  ### Case I-1-c: Linear
+  } else if(isLm.m){
     sigma <- summary(model.m)$sigma
     error <- rnorm(sims*n, mean=0, sd=sigma)
     muM1 <- tcrossprod(MModel, mmat.t)

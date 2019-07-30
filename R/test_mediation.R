@@ -1,10 +1,14 @@
 #our calls always this style: mediate(model.m, model.y, treat= "X", mediator="M", sims = nSimImai)
 #both models are lm with no special types / conditions
-test.mediate.vanilla <- 
-  function(model.m, model.y, sims = 1000,boot = FALSE, boot.ci.type = "perc", treat = "treat.name", mediator = "med.name",covariates = NULL,
-           conf.level = .95, control.value = 0, treat.value = 1, long = TRUE,robustSE = FALSE, cluster = NULL, return_context=F, context_before=F, export_loop_vars=F){
+test.mediate.rcpp <- 
+  function(model.m, model.y, sims = 1000,boot = FALSE, boot.ci.type = "perc", 
+           treat = "treat.name", mediator = "med.name", covariates = NULL,
+           conf.level = .95, control.value = 0, treat.value = 1, 
+           long = TRUE,robustSE = FALSE, cluster = NULL, 
+           return_context=F, context_before=F, export_loop_vars=F){
   
   cl <- match.call()
+  num_threads = getOption("mediate.threads", default = 1)
   
   # Model type indicators
   isGam.y <- inherits(model.y, "gam")
@@ -142,9 +146,8 @@ test.mediate.vanilla <-
       stop("unsupported glm family")
     }
     
-  }### Case I-1-c: Linear
-  #} else 
-  if(isLm.m){
+  ### Case I-1-c: Linear
+  } else if(isLm.m){
     sigma <- summary(model.m)$sigma
     error <- rnorm(sims*n, mean=0, sd=sigma)
     muM1 <- tcrossprod(MModel, mmat.t)
@@ -164,8 +167,8 @@ test.mediate.vanilla <-
     return(environment())
   }
   
-  if(num_cores > 1){
-    threaded_mediate_helper(environment(), num_cores)
+  if(num_threads > 1){
+    threaded_mediate_helper(environment(), num_threads)
   } else {
     if(export_loop_vars){
       mediate_helper_variable_exporter(environment())
@@ -285,9 +288,13 @@ test.mediate.vanilla <-
   return(out)
 }
 
-test.mediate.rcpp <- 
-  function(model.m, model.y, sims = 1000,boot = FALSE, boot.ci.type = "perc", treat = "treat.name", mediator = "med.name",covariates = NULL,
-           conf.level = .95, control.value = 0, treat.value = 1,long = TRUE, robustSE = FALSE, cluster = NULL, return_context=F, context_before=F, export_loop_vars=F){
+test.mediate.vanilla <- 
+  function(model.m, model.y, sims = 1000,boot = FALSE, boot.ci.type = "perc", 
+           treat = "treat.name", mediator = "med.name",covariates = NULL,
+           conf.level = .95, control.value = 0, treat.value = 1,long = TRUE, 
+           robustSE = FALSE, cluster = NULL, 
+           return_context=F, context_before=F, export_loop_vars=F){
+    
   cl <- match.call()
   # Model type indicators
   isGam.y <- inherits(model.y, "gam")
@@ -425,9 +432,8 @@ test.mediate.rcpp <-
       stop("unsupported glm family")
     }
     
-  }### Case I-1-c: Linear
-  #} else 
-  if(isLm.m){
+  ### Case I-1-c: Linear
+  } else if(isLm.m){
     sigma <- summary(model.m)$sigma
     error <- rnorm(sims*n, mean=0, sd=sigma)
     muM1 <- tcrossprod(MModel, mmat.t)
@@ -481,7 +487,7 @@ test.mediate.rcpp <-
       Pr1[,j] <- t(as.matrix(YModel[j,])) %*% t(ymat.t)
       Pr0[,j] <- t(as.matrix(YModel[j,])) %*% t(ymat.c)
       
-      if((!exported) && export_loop_vars){
+      if((!vars_exported) && export_loop_vars){
         genv = globalenv()
         genv[["vanillaR.ymat.t"]] = ymat.t
         genv[["vanillaR.ymat.c"]] = ymat.c
@@ -494,7 +500,7 @@ test.mediate.rcpp <-
         genv[["vanillaR.cat.c"]] = cat.c
         genv[["vanillaR.cat.t.ctrl"]] = cat.t.ctrl
         genv[["vanillaR.cat.c.ctrl"]] = cat.c.ctrl
-        exported= T
+        vars_exported= T
       }
       
       rm(ymat.t, ymat.c, pred.data.t, pred.data.c)

@@ -2,7 +2,7 @@
 // [[Rcpp::depends(RcppEigen)]]
 #ifndef EIGEN_DONT_PARALLELIZE
 #define EIGEN_DONT_PARALLELIZE
-#endif
+#endif //EIGEN_DONT_PARALLELIZE
 #include "mediation_helper.hpp"
 
 
@@ -43,9 +43,13 @@ void MediationHelper::pred_to_model_mat(Eigen::MatrixXd &pred_mat, Eigen::Matrix
   // Rcpp::Rcout << "model_mat dims:" << model_mat.rows() << ',' << model_mat.cols() << std::endl;
   // Rcpp::Rcout << "pred_mat dims:" << pred_mat.rows() << ',' << pred_mat.cols() << std::endl;
   // Rf_error("STOP");
+  
+  // Rcpp::Rcout << "dimensions of prediction_matrix: " << pred_mat.rows() << ',' << pred_mat.cols() << std::endl;
+  // Rcpp::Rcout << "dimensions of model_mat: " << model_mat.rows() << ',' << model_mat.cols() << std::endl;
+  model_mat = pred_mat;
   model_mat.col(0).setOnes();
-  model_mat.col(1) = pred_mat.col(1);
-  model_mat.col(2) = pred_mat.col(2);
+  // model_mat.col(1) = pred_mat.col(1);
+  // model_mat.col(2) = pred_mat.col(2);
 }
 
 void MediationHelper::inner_loop(OuterLoopVars &olv, std::size_t j){

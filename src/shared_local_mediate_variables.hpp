@@ -1,14 +1,20 @@
 #pragma once
 
-#ifndef STRUCT_SHAREDLOCALMEDIATEVARIABLES_HPP
-#define STRUCT_SHAREDLOCALMEDIATEVARIABLES_HPP
 #ifndef EIGEN_DONT_PARALLELIZE
 #define EIGEN_DONT_PARALLELIZE
-#endif
+#endif //EIGEN_DONT_PARALLELIZE
+
+#ifndef STRUCT_SHAREDLOCALMEDIATEVARIABLES_HPP
+#define STRUCT_SHAREDLOCALMEDIATEVARIABLES_HPP
+
 // [[Rcpp::plugins(cpp11)]]
 // [[Rcpp::depends(RcppEigen)]]
 #include <Rcpp.h>
 #include <RcppEigen.h>
+
+#include <string>
+#include <array>
+#include <vector>
 
 
 struct SharedLocalMediateVariables {
@@ -22,9 +28,6 @@ struct SharedLocalMediateVariables {
   Eigen::Index mediator_i;
   std::vector<std::string> terms;
   
-  bool isGlm_M;
-  bool FamilyM_is_binomial;
-  bool M_link_is_logit;
   bool isGlm_Y;
   bool FamilyY_is_binomial;
   bool Y_link_is_logit;
@@ -40,6 +43,7 @@ struct SharedLocalMediateVariables {
   Eigen::MatrixXd et3;
   Eigen::MatrixXd et4;
   SharedLocalMediateVariables();
+  
   void initialize_from_environment(Rcpp::Environment & env);
   void store_result_diff(Eigen::MatrixXd &Pr1, Eigen::MatrixXd &Pr0, std::size_t e);
   void export_results(Rcpp::Environment & env);

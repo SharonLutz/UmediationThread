@@ -2,7 +2,7 @@
 #both models are lm with no special types / conditions
 stripped.down.mediate <- 
   function(model.m, model.y, sims = 1000,boot = FALSE, boot.ci.type = "perc", treat = "treat.name", mediator = "med.name",covariates = NULL,
-           conf.level = .95, control.value = 0, treat.value = 1, long = TRUE,robustSE = FALSE, cluster = NULL){
+           conf.level = .95, control.value = 0, treat.value = 1, long = TRUE, robustSE = FALSE, cluster = NULL){
     
   cl <- match.call()
     
@@ -142,9 +142,8 @@ stripped.down.mediate <-
       stop("unsupported glm family")
     }
     
-  }### Case I-1-c: Linear
-  #} else 
-  if(isLm.m){
+  ### Case I-1-c: Linear
+  } else if(isLm.m){
     sigma <- summary(model.m)$sigma
     error <- rnorm(sims*n, mean=0, sd=sigma)
     muM1 <- tcrossprod(MModel, mmat.t)
