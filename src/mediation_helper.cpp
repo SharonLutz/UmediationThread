@@ -40,20 +40,38 @@ MediationHelper::MediationHelper(Rcpp::Environment &env, bool export_loop_vars) 
 }
 
 void MediationHelper::pred_to_model_mat(Eigen::MatrixXd &pred_mat, Eigen::MatrixXd &model_mat){
-  // Rcpp::Rcout << "model_mat dims:" << model_mat.rows() << ',' << model_mat.cols() << std::endl;
-  // Rcpp::Rcout << "pred_mat dims:" << pred_mat.rows() << ',' << pred_mat.cols() << std::endl;
-  // Rf_error("STOP");
   
-  // Rcpp::Rcout << "dimensions of prediction_matrix: " << pred_mat.rows() << ',' << pred_mat.cols() << std::endl;
-  // Rcpp::Rcout << "dimensions of model_mat: " << model_mat.rows() << ',' << model_mat.cols() << std::endl;
-  model_mat = pred_mat;
+  // Rcpp::Rcout << "pred_to_model_mat  begin" << std::endl;
+  
+  if(sv.interaction_term_present){
+    model_mat.resize(pred_mat.rows(),sv.variables.size()+1);
+  } else {
+    model_mat.resize(pred_mat.rows(),sv.variables.size());
+  }
+  // Rcpp::Rcout << "pred_mat dims: "<<pred_mat.rows() << ',' << pred_mat.cols()<< std::endl;
+  // Rcpp::Rcout << "model_mat resized to: "<<model_mat.rows() << ',' << model_mat.cols()<< std::endl;
+  
   model_mat.col(0).setOnes();
-  // model_mat.col(1) = pred_mat.col(1);
-  // model_mat.col(2) = pred_mat.col(2);
+  
+  // Rcpp::Rcout << "intercept column set to 1's" << std::endl;
+  
+  for(Eigen::Index col_i=1; col_i < pred_mat.cols(); ++col_i){
+    // Rcpp::Rcout << "copying column "<< col_i << " from predictions to model matrix" << std::endl;
+    model_mat.col(col_i) = pred_mat.col(col_i);
+  }
+  if(sv.interaction_term_present){
+    // Rcpp::Rcout << "multiplying mediator column: "<< sv.mediator_i << " and treatment column: "<< sv.treat_i << "from predictions, and storing in model matrix at column: " << sv.interaction_term_i << std::endl;
+    
+    model_mat.col(sv.interaction_term_i) = pred_mat.col(sv.mediator_i).array() * pred_mat.col(sv.treat_i).array();
+    
+    // Rcpp::Rcout << "result of multiplication stored" << std::endl;
+  }
+  // Rcpp::Rcout << "pred_to_model_mat  end" << std::endl;
+  // Rcpp::Rcout << model_mat << std::endl;
 }
 
 void MediationHelper::inner_loop(OuterLoopVars &olv, std::size_t j){
-  // Rcpp::Rcout << "inner: " << j << std::endl;
+  // Rcpp::Rcout << "inner: " << j << " begin"<< std::endl;
   
   Eigen::MatrixXd pred_data_t = sv.y_data;
   Eigen::MatrixXd pred_data_c = sv.y_data;
@@ -61,21 +79,30 @@ void MediationHelper::inner_loop(OuterLoopVars &olv, std::size_t j){
   pred_data_t.col(sv.treat_i).setConstant(olv.cat_t);
   pred_data_c.col(sv.treat_i).setConstant(olv.cat_c);
   
+  // Rcpp::Rcout << "set category constants for pred.data matrices treatment cols"<< std::endl;
+  
   //PredictMt <- PredictM1[j,] * tt[3] + PredictM0[j,] * (1 - tt[3])
   //PredictMc <- PredictM1[j,] * tt[4] + PredictM0[j,] * (1 - tt[4])
   auto PredictMt = (sv.PredictM1.row(j) * olv.tt[2]) + (sv.PredictM0.row(j) * (1-olv.tt[2]));
   auto PredictMc = (sv.PredictM1.row(j) * olv.tt[3]) + (sv.PredictM0.row(j) * (1-olv.tt[3]));
+  
+  // Rcpp::Rcout << "calculated PredictM_ values"<< std::endl;
+  
   //pred.data.t[,mediator] <- PredictMt
   //pred.data.c[,mediator] <- PredictMc
   
   pred_data_t.col(sv.mediator_i) = PredictMt;
   pred_data_c.col(sv.mediator_i) = PredictMc;
   
-  Eigen::MatrixXd ymat_t(pred_data_t.rows(), sv.terms.size());
-  Eigen::MatrixXd ymat_c(pred_data_c.rows(), sv.terms.size());
+  // Rcpp::Rcout << "stored predictM_ in pred.data vars"<< std::endl;
+  
+  Eigen::MatrixXd ymat_t(0,0);
+  Eigen::MatrixXd ymat_c(0,0);
   
   pred_to_model_mat(pred_data_t, ymat_t);
   pred_to_model_mat(pred_data_c, ymat_c);
+  
+  // Rcpp::Rcout << "tranformed predictions -> model matrix"<< std::endl;
   
   if(export_loop_vars && (!vars_exported)){
     auto genv = Rcpp::Environment::global_env();
@@ -109,21 +136,21 @@ void MediationHelper::inner_loop(OuterLoopVars &olv, std::size_t j){
   olv.Pr1.col(j) = (sv.YModel.row(j) * ymat_t.transpose()).row(0);
   olv.Pr0.col(j) = (sv.YModel.row(j) * ymat_c.transpose()).row(0);
   
-  // Rcpp::Rcout << "TEST3" << std::endl;
+  // Rcpp::Rcout << "t(as.matrix(YModel[j,])) %*% t(ymat) calculated"<< std::endl;
+  
+  // Rcpp::Rcout << "inner: " << j << " end"<< std::endl;
 }
 
 void MediationHelper::outer_loop(std::size_t e) {
   // Rcpp::Rcout<< "outer_loop begin: " << e << std::endl;
   OuterLoopVars olv(sv,e);
-  
+  // Rcpp::Rcout<< "outer_loop vars initialized: " << e << std::endl;
   for(int j=0; j < sv.sims; ++j){
     inner_loop(olv,j);
   }
   
-  //TODO: if isGlm.y, apply inv.logit (logistic) to Pr1 and Pr0
-  
-  // sv.effects_tmp[e] = (Pr1 - Pr0);
   sv.store_result_diff(olv.Pr1, olv.Pr0, e);
+  
   // Rcpp::Rcout<< "outer_loop end: " << e << std::endl;
   
   if(export_loop_vars){
@@ -164,13 +191,17 @@ void MediationHelper::outer_loop_with_threaded_inner_loop(std::size_t e){
   protected_work_supplier next_index_value(num_sims);
   
   auto inner_loop_thread = [&](std::size_t thread_index){
-    std::size_t j;
-    while(!next_index_value.is_done()){
-      j = next_index_value();
-      if(j >= num_sims){
-        break;
+    try{
+      std::size_t j;
+      while(!next_index_value.is_done()){
+        j = next_index_value();
+        if(j >= num_sims){
+          break;
+        }
+        this->inner_loop(local_vars, j);
       }
-      this->inner_loop(local_vars, j);
+    } catch(...){
+      // TODO, signal the error to the main thread somehow
     }
     promises[thread_index].set_value();
   };
@@ -202,8 +233,12 @@ void MediationHelper::launcher_n_2(){
   promises.clear();
   promises.resize(4);
   auto outer_loop_thread = [&](std::size_t e){
+    try{
     this->outer_loop(e);
     this->promises[e].set_value();
+    } catch (...){
+      // TODO signal error to main thread somehow.
+    }
   };
   //2 batches of 2, runs outer loop, auto-launching the inner loop
   for(std::size_t batch=0; batch < 2; ++batch){
@@ -226,8 +261,12 @@ void MediationHelper::launcher_n_4(){
   promises.clear();
   promises.resize(4);
   auto outer_loop_thread = [&](std::size_t e){
+    try {
     this->outer_loop(e);
     this->promises[e].set_value();
+    } catch (...){
+      // TODO signal error to main thread somehow
+    }
   };
   
   for(std::size_t e=0;e<4;++e){

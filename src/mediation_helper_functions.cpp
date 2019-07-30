@@ -14,6 +14,7 @@ void mediate_helper(Rcpp::Environment &env){
   // Eigen::setNbThreads(1);
   try{
     MediationHelper h(env);
+    // return;
     h();
   }catch(std::exception &e){
     std::stringstream ss;
@@ -30,6 +31,7 @@ void mediate_helper_variable_exporter(Rcpp::Environment &env){
   // Eigen::setNbThreads(1);
   try{
     MediationHelper h(env, true);
+    // return;
     h();
   }catch(std::exception &e){
     std::stringstream ss;
@@ -43,11 +45,13 @@ void mediate_helper_variable_exporter(Rcpp::Environment &env){
 
 // [[Rcpp::export]]
 void threaded_mediate_helper(Rcpp::Environment &env, long long int num_threads){
+  
   // Eigen::setNbThreads(1);
   try{
     if(num_threads > 1){
       Eigen::initParallel();
       MediationHelper h(env, num_threads);
+      // return;
       h();
     } else {
       mediate_helper(env);

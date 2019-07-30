@@ -26,11 +26,14 @@ struct SharedLocalMediateVariables {
   std::string mediator;
   Eigen::Index treat_i;
   Eigen::Index mediator_i;
+  Eigen::Index interaction_term_i;
   std::vector<std::string> terms;
+  std::vector<std::string> variables;
   
   bool isGlm_Y;
   bool FamilyY_is_binomial;
   bool Y_link_is_logit;
+  bool interaction_term_present;
   
   std::array< std::array<int, 4>, 4 > tt_switch;
   Eigen::MatrixXd PredictM0;

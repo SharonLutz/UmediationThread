@@ -12,6 +12,7 @@ SharedLocalMediateVariables::SharedLocalMediateVariables() :
   isGlm_Y(false),
   FamilyY_is_binomial(false),
   Y_link_is_logit(false),
+  interaction_term_present(false),
   PredictM0(0,0),
   PredictM1(0,0),
   YModel(0,0),
@@ -31,19 +32,23 @@ void SharedLocalMediateVariables::initialize_from_environment(Rcpp::Environment 
   this->mediator = Rcpp::as<std::string>(env["mediator"]);
   
   this->isGlm_Y = env["isGlm.y"];
-  if(this->isGlm_Y){
-    Rcpp::GenericVector model_y = env["model.y"];
-    
-    // Rcpp::Rcout << "model_y || isObject: "<< model_y.isObject() << "; sexp_type: " << model_y.sexp_type() << std::endl;
-    
-    long long int family_index=-1;
-    
-    Rcpp::CharacterVector model_y_names = model_y.attr("names");
-    for(long long int i=0; i < model_y_names.size(); ++i){
-      if(model_y_names[i] == "family"){
-        family_index = i;
-      }
+  
+  Rcpp::GenericVector model_y = env["model.y"];
+  Rcpp::CharacterVector model_y_names = model_y.attr("names");
+  // Rcpp::Rcout << "model_y || isObject: "<< model_y.isObject() << "; sexp_type: " << model_y.sexp_type() << std::endl;
+  long long int family_index=-1;
+  long long int terms_index=-1;
+  
+  for(long long int i=0; i < model_y_names.size(); ++i){
+    if(this->isGlm_Y && (model_y_names[i] == "family")){
+      family_index = i;
     }
+    if(model_y_names[i] == "terms"){
+      terms_index = i;
+    }
+  }
+  
+  if(this->isGlm_Y){
     if(family_index < 0){
       Rf_error("error processing GLM object for model.y: name 'family' not found in model.y");
     }
@@ -88,33 +93,80 @@ void SharedLocalMediateVariables::initialize_from_environment(Rcpp::Environment 
   this->YModel = env["YModel"];
   
   Rcpp::DataFrame R_y_data = Rcpp::as<Rcpp::DataFrame>(env["y.data"]);
-  // Rcpp::Language terms = R_y_data.attr("terms");
-  // Rcpp::CharacterVector variable_labels = terms.attr("term.labels");
-  
-  Rcpp::CharacterVector variable_labels = R_y_data.names();
   
   Eigen::Index ncol = R_y_data.cols();
   Eigen::Index nrow = R_y_data.rows();
   
   Eigen::MatrixXd y_data_local(nrow, ncol);
   
-  for(long long int i=0;i<variable_labels.size();++i){
-    std::string label;
-    label = variable_labels[i];
-    
-    if(label == this->treat){
-      this->treat_i = i;
-    }
-    if(label == this->mediator){
-      this->mediator_i = i;
-    }
-    long long int j = R_y_data.findName(label);
-    
-    auto col = Rcpp::as<Eigen::VectorXd>(R_y_data[j]);
-    y_data_local.col(i) = col;
-    this->terms.emplace_back(label);
+  if(terms_index < 0){
+    Rf_error("error processing model.y: name 'terms' not found in model.y");
   }
   
+  Rcpp::RObject terms_obj = model_y[terms_index];
+  Rcpp::IntegerMatrix factor_matrix = terms_obj.attr("factors");
+  
+  Rcpp::GenericVector factor_dimnames = factor_matrix.attr("dimnames");
+  
+  
+  Rcpp::CharacterVector variables_vec = factor_dimnames[0];
+  Rcpp::CharacterVector terms_vec = factor_dimnames[1];
+  
+  
+  // Rcpp::Rcout << "Model Terms:" << std::endl;
+  
+  std::string interact_str_1;
+  std::string interact_str_2;
+  
+  {
+    std::stringstream ss1,ss2;
+    ss1 << this->treat;
+    ss2 << this->mediator;
+    ss1 << ':';
+    ss2 << ':';
+    ss1 << this->mediator;
+    ss2 << this->treat;
+    interact_str_1 = ss1.str();
+    interact_str_2 = ss2.str();
+  }
+  
+  
+  for(long long int i=0;i<terms_vec.size();++i){
+    std::string label;
+    
+    label = terms_vec[i];
+    
+    if(label == this->treat){
+      this->treat_i = i + 1;
+    }
+    
+    if(label == this->mediator){
+      this->mediator_i = i + 1;
+    }
+    
+    // Rcpp::Rcout << label;
+    
+    if(label == interact_str_1 || label == interact_str_2){
+      // Rcpp::Rcout << "\tInteraction Term Detected";
+      interaction_term_present=true;
+      interaction_term_i = i + 1;
+    }
+    // Rcpp::Rcout << std::endl;
+    
+    
+    this->terms.emplace_back(label);
+  }
+  // Rcpp::Rcout << "Model Variables:" << std::endl;
+  for(long long int i=0;i<variables_vec.size();++i){
+    std::string variable_name = std::string(variables_vec[i]);
+    
+    // Rcpp::Rcout << variable_name << std::endl;
+    long long int j = R_y_data.findName(variable_name);
+    auto col = Rcpp::as<Eigen::VectorXd>(R_y_data[j]);
+    y_data_local.col(i) = col;
+    
+    this->variables.emplace_back(variable_name);
+  }
   this->y_data = y_data_local;
 }
 
