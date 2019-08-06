@@ -1,4 +1,5 @@
-
+#' @export
+#' @title ErrorCheck
 ErrorCheck<-function(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,varA=1,alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,beta0=0,betaA=0,betaM=0,betaI=0,betaC=0,betaU=0,varY=1,alpha=0.05,nSim=300,nBoot=500,seed=1,atreat=1,acontrol=0){
     
     ##################

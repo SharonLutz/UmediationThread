@@ -2,7 +2,48 @@
 #' @import mediation
 
 #' @export
-Umediation<-function(n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,varA=1,alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,beta0=0,betaA=0,betaM=0,betaI=0,betaC=0,betaU=0,varY=1,alpha=0.05,nSim=250,nBoot=400,seed=1,atreat=1,acontrol=0, use_cpp=F, num_cores=getOption("mediate.threads", default = 1)){
+#' @title Umediation
+#' @description Umediation
+#' @author Sharon Lutz, Michael Gooch
+#' @param n n
+#' @param Atype Atype
+#' @param Mtype Mtype
+#' @param Ytype Ytype
+#' @param Ctype Ctype
+#' @param Utype Utype
+#' @param interact interact
+#' @param muC muC
+#' @param varC varC
+#' @param muU muU
+#' @param varU varU
+#' @param gamma0 gamma0
+#' @param gammaC gammaC
+#' @param gammaU gammaU
+#' @param varA varA
+#' @param alpha0 alpha0
+#' @param alphaA alphaA
+#' @param alphaC alphaC
+#' @param alphaU alphaU
+#' @param varM varM
+#' @param beta0 beta0
+#' @param betaA betaA
+#' @param betaM betaM
+#' @param betaI betaI
+#' @param betaC betaC
+#' @param betaU betaU
+#' @param varY varY
+#' @param alpha alpha
+#' @param nSim nSim
+#' @param nBoot nBoot
+#' @param seed seed
+#' @param atreat atreat
+#' @param acontrol acontrol
+#' @param use_cpp use_cpp
+#' @param num_cores num_cores
+Umediation <- function(
+  n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,
+  varA=1,alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,beta0=0,betaA=0,betaM=0,betaI=0,betaC=0,betaU=0,varY=1,alpha=0.05,nSim=250,
+  nBoot=400,seed=1,atreat=1,acontrol=0, use_cpp=F, num_cores=getOption("mediate.threads", default = 1)){
   
   options(mediate.threads = num_cores)
   
