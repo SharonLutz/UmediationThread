@@ -9,7 +9,8 @@ install.packages("devtools")
 # these will fail to install when already loaded, and install_github will sometimes 
 # load these as part of its activity, and will then try to install them if they need 
 # an update for one of the package dependencies
-install.packages(c("Rcpp","RcppEigen", "curl"), quiet=T) # if there is an error you might need to set quiet=F to see more information about it
+install.packages(c("Rcpp","RcppEigen", "curl"), quiet=T) 
+# if there is an error you might need to set quiet=F to see more information about it
 
 #finally install UMediation and any remaining dependencies
 devtools::install_github("SharonLutz/Umediation",quiet=T)
