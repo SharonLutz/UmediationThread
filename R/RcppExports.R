@@ -13,6 +13,10 @@ threaded_mediate_helper <- function(env, num_threads) {
     invisible(.Call(`_Umediation_threaded_mediate_helper`, env, num_threads))
 }
 
+test_pseudo_dataframe <- function(env, var_name, treat_name, mediator_name) {
+    .Call(`_Umediation_test_pseudo_dataframe`, env, var_name, treat_name, mediator_name)
+}
+
 test <- function(env) {
     invisible(.Call(`_Umediation_test`, env))
 }

@@ -4,25 +4,41 @@ The Umediation R package enables the user to simulate unmeasured confounding in 
 ## Installation
 ```
 install.packages("devtools") #The devtools package must be installed first
-install.packages("mediation") #The mediation package must be installed first
-install.packages("car") #The car package must be installed first
 
-devtools::install_github("SharonLutz/Umediation")
+devtools::install_github("SharonLutz/Umediation",quiet=T)
+```
+
+The install process will involve compiling source code. If you are on MacOSX, and do not quiet the build process with quiet=T, this may involve the clang compiler issuing warnings about unknown pragmas similar to the text below. Do not be alarmed if you see these. If there is actually an error, it will be present among the last several messages issued by the compiler.
+
+```
+warning: pragma diagnostic pop could not pop, no matching push [-Wunknown-pragmas]
 ```
 ## Example
 Below, we simulate 4 unmeasured confounders U (2 normally distributed and 2 Bernouilli distributed random variables) on the binary exposure, A, normally distributed mediator, M, and normally distributed outcome Y adjusted for one normally distributed covariate and 2 binary distributed covariates.
 ```
+
+
 library(Umediation)
 ?Umediation # For details on this function and how to choose input variables
 
-testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),interact=TRUE,muC=c(0.1,0.3,0.2),
-varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,
-alphaC=c(0.3,0.2,0.2),alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),betaU=c(0.3,0.2,-1.3,0.2),
-varY=1,alpha=0.05,nSim=100,nBoot=400)
+testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400)
 
 testM
 
 ```
+## Speed up mediation with Threading and Eigen via C++
+the Umediation command accepts the following parameters:
+* use_cpp, a boolean(T, F, True, or False), which activates the use of Rcpp RcppEigen, and threading.
+* num_cores, an integer specifying the number of cpus/threads you wish to use.
+```
+Example Using Rcpp with Eigen and 5 threads:
+
+testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_cpp = T, num_cores = 5)
+
+```
+### Important Caveats for the Faster Processing Strategies:
+
+It is advisable that you tailor your num_jobs variable to be the # of your CPU cores - 1, at the maximum, to leave 1 core free to handle the original calling R process and any background OS processes. If you use too many threads, your system will become slow and relatively unresponsive and may lock up until the processing completes.
 
 ## Output
 For this analysis, we can see that there is not a significant difference in the proportion of simulations for the mediated effect if the unmeasured confounders are included, but there is a large diffence in the inference for the direct effect if these unmeasured confounders are not included in the analysis.

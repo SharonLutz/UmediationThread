@@ -4,8 +4,9 @@
 #define EIGEN_DONT_PARALLELIZE
 #endif //EIGEN_DONT_PARALLELIZE
 #include "mediation_helper.hpp"
-
-
+#include "logit_logistic_func.hpp"
+#include "pseudo_dataframe.hpp"
+//#define MEDIATION_DEBUG_PRINTING
 
 OuterLoopVars::OuterLoopVars(SharedLocalMediateVariables &sv, std::size_t e) :
   e(e),
@@ -39,81 +40,64 @@ MediationHelper::MediationHelper(Rcpp::Environment &env, bool export_loop_vars) 
   sv.initialize_from_environment(env);
 }
 
-void MediationHelper::pred_to_model_mat(Eigen::MatrixXd &pred_mat, Eigen::MatrixXd &model_mat){
-  
-  // Rcpp::Rcout << "pred_to_model_mat  begin" << std::endl;
-  
-  if(sv.interaction_term_present){
-    model_mat.resize(pred_mat.rows(),sv.variables.size()+1);
-  } else {
-    model_mat.resize(pred_mat.rows(),sv.variables.size());
-  }
-  // Rcpp::Rcout << "pred_mat dims: "<<pred_mat.rows() << ',' << pred_mat.cols()<< std::endl;
-  // Rcpp::Rcout << "model_mat resized to: "<<model_mat.rows() << ',' << model_mat.cols()<< std::endl;
-  
-  model_mat.col(0).setOnes();
-  
-  // Rcpp::Rcout << "intercept column set to 1's" << std::endl;
-  
-  for(Eigen::Index col_i=1; col_i < pred_mat.cols(); ++col_i){
-    // Rcpp::Rcout << "copying column "<< col_i << " from predictions to model matrix" << std::endl;
-    model_mat.col(col_i) = pred_mat.col(col_i);
-  }
-  if(sv.interaction_term_present){
-    // Rcpp::Rcout << "multiplying mediator column: "<< sv.mediator_i << " and treatment column: "<< sv.treat_i << "from predictions, and storing in model matrix at column: " << sv.interaction_term_i << std::endl;
-    
-    model_mat.col(sv.interaction_term_i) = pred_mat.col(sv.mediator_i).array() * pred_mat.col(sv.treat_i).array();
-    
-    // Rcpp::Rcout << "result of multiplication stored" << std::endl;
-  }
-  // Rcpp::Rcout << "pred_to_model_mat  end" << std::endl;
-  // Rcpp::Rcout << model_mat << std::endl;
-}
-
 void MediationHelper::inner_loop(OuterLoopVars &olv, std::size_t j){
-  // Rcpp::Rcout << "inner: " << j << " begin"<< std::endl;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "inner: " << j << " begin"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
+  PseudoDataFrame pred_data_t(sv.y_data), pred_data_c(sv.y_data);
   
-  Eigen::MatrixXd pred_data_t = sv.y_data;
-  Eigen::MatrixXd pred_data_c = sv.y_data;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "pred_data vars initialized with y_data"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   
-  pred_data_t.col(sv.treat_i).setConstant(olv.cat_t);
-  pred_data_c.col(sv.treat_i).setConstant(olv.cat_c);
+  pred_data_t.treat().col(0).setConstant(olv.cat_t);
+  pred_data_c.treat().col(0).setConstant(olv.cat_c);
   
-  // Rcpp::Rcout << "set category constants for pred.data matrices treatment cols"<< std::endl;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "set category constants for pred.data matrices treatment cols"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   
   //PredictMt <- PredictM1[j,] * tt[3] + PredictM0[j,] * (1 - tt[3])
   //PredictMc <- PredictM1[j,] * tt[4] + PredictM0[j,] * (1 - tt[4])
   auto PredictMt = (sv.PredictM1.row(j) * olv.tt[2]) + (sv.PredictM0.row(j) * (1-olv.tt[2]));
   auto PredictMc = (sv.PredictM1.row(j) * olv.tt[3]) + (sv.PredictM0.row(j) * (1-olv.tt[3]));
   
-  // Rcpp::Rcout << "calculated PredictM_ values"<< std::endl;
-  
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "calculated PredictM_ values"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   //pred.data.t[,mediator] <- PredictMt
   //pred.data.c[,mediator] <- PredictMc
   
-  pred_data_t.col(sv.mediator_i) = PredictMt;
-  pred_data_c.col(sv.mediator_i) = PredictMc;
+  pred_data_t.mediator().col(0) = PredictMt;
+  pred_data_c.mediator().col(0) = PredictMc;
   
-  // Rcpp::Rcout << "stored predictM_ in pred.data vars"<< std::endl;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "stored predictM_ in pred.data vars"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
+  Eigen::MatrixXd ymat_t;
+  Eigen::MatrixXd ymat_c;
   
-  Eigen::MatrixXd ymat_t(0,0);
-  Eigen::MatrixXd ymat_c(0,0);
+  pred_data_t.to_model_matrix(ymat_t);
+  pred_data_c.to_model_matrix(ymat_c);
   
-  pred_to_model_mat(pred_data_t, ymat_t);
-  pred_to_model_mat(pred_data_c, ymat_c);
-  
-  // Rcpp::Rcout << "tranformed predictions -> model matrix"<< std::endl;
-  
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "tranformed predictions -> model matrix"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   if(export_loop_vars && (!vars_exported)){
+    Rcpp::Rcout << "attempting to export inner loop vars"<< std::endl;
     auto genv = Rcpp::Environment::global_env();
     // genv[["vanillaR.ymat.t"]] = ymat.t
     genv["rcpp.ymat.t"] = ymat_t;
     // genv[["vanillaR.ymat.c"]] = ymat.c
     genv["rcpp.ymat.c"] = ymat_c;
     // genv[["vanillaR.pred.data.t"]] = pred.data.t
-    genv["rcpp.pred.data.t"] = pred_data_t;
+    Eigen::MatrixXd tmp_t;
+    Eigen::MatrixXd tmp_c;
+    pred_data_t.flatten_into_model_matrix(tmp_t);
+    pred_data_c.flatten_into_model_matrix(tmp_c);
+    genv["rcpp.pred.data.t"] = tmp_t;
     // genv[["vanillaR.pred.data.c"]] = pred.data.c
-    genv["rcpp.pred.data.c"] = pred_data_c;
+    genv["rcpp.pred.data.c"] = tmp_c;
     // genv[["vanillaR.tt"]] = tt
     genv["rcpp.tt"] = olv.tt;
     // genv[["vanillaR.PredictMt"]] = PredictMt
@@ -135,26 +119,50 @@ void MediationHelper::inner_loop(OuterLoopVars &olv, std::size_t j){
   //Pr0[,j] <- t(as.matrix(YModel[j,])) %*% t(ymat.c)
   olv.Pr1.col(j) = (sv.YModel.row(j) * ymat_t.transpose()).row(0);
   olv.Pr0.col(j) = (sv.YModel.row(j) * ymat_c.transpose()).row(0);
-  
-  // Rcpp::Rcout << "t(as.matrix(YModel[j,])) %*% t(ymat) calculated"<< std::endl;
-  
-  // Rcpp::Rcout << "inner: " << j << " end"<< std::endl;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout << "t(as.matrix(YModel[j,])) %*% t(ymat) calculated"<< std::endl;
+  Rcpp::Rcout << "inner: " << j << " end"<< std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
 }
 
 void MediationHelper::outer_loop(std::size_t e) {
-  // Rcpp::Rcout<< "outer_loop begin: " << e << std::endl;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout<< "outer_loop begin: " << e << std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   OuterLoopVars olv(sv,e);
-  // Rcpp::Rcout<< "outer_loop vars initialized: " << e << std::endl;
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout<< "outer_loop vars initialized: " << e << std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   for(int j=0; j < sv.sims; ++j){
     inner_loop(olv,j);
   }
   
+  // check for GLM, binomial, logit in model.y
+  if(sv.FamilyY_is_binomial){
+    
+    if(export_loop_vars){
+      auto genv = Rcpp::Environment::global_env();
+      Rcpp::Rcout << "attempting to export outer loop vars"<< std::endl;
+      std::stringstream ss1,ss2;
+      ss1 << "rcpp.Pr1.pre_apply." << (e+1);
+      ss2 << "rcpp.Pr0.pre_apply." << (e+1);
+      genv[ss1.str()] = olv.Pr1;
+      genv[ss2.str()] = olv.Pr0;
+    }
+    
+    // TODO: if so, apply logistic(a) to Pr0 and Pr1
+    olv.Pr1 = olv.Pr1.unaryExpr(std::ref(logistic));
+    olv.Pr0 = olv.Pr0.unaryExpr(std::ref(logistic));
+  }
+  
   sv.store_result_diff(olv.Pr1, olv.Pr0, e);
   
-  // Rcpp::Rcout<< "outer_loop end: " << e << std::endl;
-  
+#ifdef MEDIATION_DEBUG_PRINTING
+  Rcpp::Rcout<< "outer_loop end: " << e << std::endl;
+#endif //MEDIATION_DEBUG_PRINTING
   if(export_loop_vars){
     auto genv = Rcpp::Environment::global_env();
+    Rcpp::Rcout << "attempting to export outer loop vars"<< std::endl;
     std::stringstream ss1,ss2;
     ss1 << "rcpp.Pr1." << (e+1);
     ss2 << "rcpp.Pr0." << (e+1);
@@ -223,6 +231,10 @@ void MediationHelper::outer_loop_with_threaded_inner_loop(std::size_t e){
   
   //TODO: if isGlm.y, apply inv.logit (logistic) to Pr1 and Pr0
   // sv.effects_tmp[e] = (Pr1 - Pr0);
+  if(sv.FamilyY_is_binomial){
+    local_vars.Pr1 = local_vars.Pr1.unaryExpr(std::ref(logistic));
+    local_vars.Pr0 = local_vars.Pr0.unaryExpr(std::ref(logistic));
+  }
   
   sv.store_result_diff(local_vars.Pr1, local_vars.Pr0, e);
 }

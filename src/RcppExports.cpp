@@ -37,6 +37,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// test_pseudo_dataframe
+Eigen::MatrixXd test_pseudo_dataframe(Rcpp::Environment& env, std::string var_name, std::string treat_name, std::string mediator_name);
+RcppExport SEXP _Umediation_test_pseudo_dataframe(SEXP envSEXP, SEXP var_nameSEXP, SEXP treat_nameSEXP, SEXP mediator_nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::Environment& >::type env(envSEXP);
+    Rcpp::traits::input_parameter< std::string >::type var_name(var_nameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type treat_name(treat_nameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type mediator_name(mediator_nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_pseudo_dataframe(env, var_name, treat_name, mediator_name));
+    return rcpp_result_gen;
+END_RCPP
+}
 // test
 void test(Rcpp::Environment& env);
 RcppExport SEXP _Umediation_test(SEXP envSEXP) {
@@ -52,6 +66,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_Umediation_mediate_helper", (DL_FUNC) &_Umediation_mediate_helper, 1},
     {"_Umediation_mediate_helper_variable_exporter", (DL_FUNC) &_Umediation_mediate_helper_variable_exporter, 1},
     {"_Umediation_threaded_mediate_helper", (DL_FUNC) &_Umediation_threaded_mediate_helper, 2},
+    {"_Umediation_test_pseudo_dataframe", (DL_FUNC) &_Umediation_test_pseudo_dataframe, 4},
     {"_Umediation_test", (DL_FUNC) &_Umediation_test, 1},
     {NULL, NULL, 0}
 };

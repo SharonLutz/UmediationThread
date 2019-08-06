@@ -16,9 +16,6 @@ Depends: R (>= 3.5.1)
 Imports: 
     car,
     mediation,
-    pbapply,
-    snow,
-    parallel,
     Rcpp
 URL: https://github.com/SharonLutz/Umediation
 BugReports: https://github.com/SharonLutz/Umediation/issues
@@ -28,10 +25,7 @@ Collate:
     'RcppExports.R'
     'Umediation-package.R'
     'Umediation.R'
-    'mediate_s4_classes.R'
     'mediate_with_rcpp.R'
-    'multi_process_mediate_impl.R'
-    'multi_process_mediate.R'
     'pval.R'
     'stripped_down_mediate.R'
     'test_mediation.R'

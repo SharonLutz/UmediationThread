@@ -6,7 +6,6 @@
 #endif //EIGEN_DONT_PARALLELIZE
 
 #include "shared_local_mediate_variables.hpp"
-#include "logit_logistic_func.hpp"
 
 SharedLocalMediateVariables::SharedLocalMediateVariables() : 
   isGlm_Y(false),
@@ -16,7 +15,6 @@ SharedLocalMediateVariables::SharedLocalMediateVariables() :
   PredictM0(0,0),
   PredictM1(0,0),
   YModel(0,0),
-  y_data(0,0),
   et1(0,0),
   et2(0,0),
   et3(0,0),
@@ -28,8 +26,9 @@ void SharedLocalMediateVariables::initialize_from_environment(Rcpp::Environment 
   this->sims = env["sims"];
   this->cat_0 = env["cat.0"];
   this->cat_1 = env["cat.1"];
-  this->treat = Rcpp::as<std::string>(env["treat"]);
-  this->mediator = Rcpp::as<std::string>(env["mediator"]);
+  
+  std::string treat = Rcpp::as<std::string>(env["treat"]);
+  std::string mediator = Rcpp::as<std::string>(env["mediator"]);
   
   this->isGlm_Y = env["isGlm.y"];
   
@@ -37,14 +36,10 @@ void SharedLocalMediateVariables::initialize_from_environment(Rcpp::Environment 
   Rcpp::CharacterVector model_y_names = model_y.attr("names");
   // Rcpp::Rcout << "model_y || isObject: "<< model_y.isObject() << "; sexp_type: " << model_y.sexp_type() << std::endl;
   long long int family_index=-1;
-  long long int terms_index=-1;
   
   for(long long int i=0; i < model_y_names.size(); ++i){
     if(this->isGlm_Y && (model_y_names[i] == "family")){
       family_index = i;
-    }
-    if(model_y_names[i] == "terms"){
-      terms_index = i;
     }
   }
   
@@ -92,82 +87,7 @@ void SharedLocalMediateVariables::initialize_from_environment(Rcpp::Environment 
   this->PredictM1 = env["PredictM1"];
   this->YModel = env["YModel"];
   
-  Rcpp::DataFrame R_y_data = Rcpp::as<Rcpp::DataFrame>(env["y.data"]);
-  
-  Eigen::Index ncol = R_y_data.cols();
-  Eigen::Index nrow = R_y_data.rows();
-  
-  Eigen::MatrixXd y_data_local(nrow, ncol);
-  
-  if(terms_index < 0){
-    Rf_error("error processing model.y: name 'terms' not found in model.y");
-  }
-  
-  Rcpp::RObject terms_obj = model_y[terms_index];
-  Rcpp::IntegerMatrix factor_matrix = terms_obj.attr("factors");
-  
-  Rcpp::GenericVector factor_dimnames = factor_matrix.attr("dimnames");
-  
-  
-  Rcpp::CharacterVector variables_vec = factor_dimnames[0];
-  Rcpp::CharacterVector terms_vec = factor_dimnames[1];
-  
-  
-  // Rcpp::Rcout << "Model Terms:" << std::endl;
-  
-  std::string interact_str_1;
-  std::string interact_str_2;
-  
-  {
-    std::stringstream ss1,ss2;
-    ss1 << this->treat;
-    ss2 << this->mediator;
-    ss1 << ':';
-    ss2 << ':';
-    ss1 << this->mediator;
-    ss2 << this->treat;
-    interact_str_1 = ss1.str();
-    interact_str_2 = ss2.str();
-  }
-  
-  
-  for(long long int i=0;i<terms_vec.size();++i){
-    std::string label;
-    
-    label = terms_vec[i];
-    
-    if(label == this->treat){
-      this->treat_i = i + 1;
-    }
-    
-    if(label == this->mediator){
-      this->mediator_i = i + 1;
-    }
-    
-    // Rcpp::Rcout << label;
-    
-    if(label == interact_str_1 || label == interact_str_2){
-      // Rcpp::Rcout << "\tInteraction Term Detected";
-      interaction_term_present=true;
-      interaction_term_i = i + 1;
-    }
-    // Rcpp::Rcout << std::endl;
-    
-    
-    this->terms.emplace_back(label);
-  }
-  // Rcpp::Rcout << "Model Variables:" << std::endl;
-  for(long long int i=0;i<variables_vec.size();++i){
-    std::string variable_name = std::string(variables_vec[i]);
-    
-    // Rcpp::Rcout << variable_name << std::endl;
-    long long int j = R_y_data.findName(variable_name);
-    auto col = Rcpp::as<Eigen::VectorXd>(R_y_data[j]);
-    y_data_local.col(i) = col;
-    
-    this->variables.emplace_back(variable_name);
-  }
-  this->y_data = y_data_local;
+  this->y_data.initialize_from_env(env,"y.data", treat, mediator);
 }
 
 // [[Rcpp::export]]
@@ -175,19 +95,14 @@ void test(Rcpp::Environment & env){
   SharedLocalMediateVariables sv;
   sv.initialize_from_environment(env);
   Rcpp::Rcout << sv.y_data.rows() << ',' <<  sv.y_data.cols()<< std::endl;
-  Rcpp::Rcout << sv.y_data << std::endl;
+  Eigen::MatrixXd tmp;
+  sv.y_data.flatten_into_model_matrix(tmp);
+  Rcpp::Rcout << tmp << std::endl;
 }
 
 void SharedLocalMediateVariables::store_result_diff(Eigen::MatrixXd &Pr1, Eigen::MatrixXd &Pr0, std::size_t e){
   // Rcpp::Rcout << (Pr1(0,0) - Pr0(0,0)) << std::endl;
   // Rcpp::Rcout << (Pr1 - Pr0) << std::endl;
-  
-  // check for GLM, binomial, logit in model.y
-  if(this->FamilyY_is_binomial){
-    // TODO: if so, apply logistic(a) to Pr0 and Pr1
-    Pr1.unaryExpr(std::ref(logistic));
-    Pr0.unaryExpr(std::ref(logistic));
-  }
   switch(e){
   default:
     Rf_error("invalid value of e");

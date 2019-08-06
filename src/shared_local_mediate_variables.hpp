@@ -15,20 +15,20 @@
 #include <string>
 #include <array>
 #include <vector>
-
+#include "pseudo_dataframe.hpp"
 
 struct SharedLocalMediateVariables {
   int n;
   int sims;
   int cat_0;
   int cat_1;
-  std::string treat;
-  std::string mediator;
-  Eigen::Index treat_i;
-  Eigen::Index mediator_i;
-  Eigen::Index interaction_term_i;
-  std::vector<std::string> terms;
-  std::vector<std::string> variables;
+  std::string& treat();
+  std::string& mediator();
+  Eigen::Index& treat_i(bool post_flattening=false);
+  Eigen::Index& mediator_i(bool post_flattening=false);
+  Eigen::Index& interaction_term_i(bool post_flattening=false);
+  std::vector<std::string>& terms();
+  std::vector<std::string>& variables();
   
   bool isGlm_Y;
   bool FamilyY_is_binomial;
@@ -39,7 +39,7 @@ struct SharedLocalMediateVariables {
   Eigen::MatrixXd PredictM0;
   Eigen::MatrixXd PredictM1;
   Eigen::MatrixXd YModel;
-  Eigen::MatrixXd y_data;
+  PseudoDataFrame y_data;
   
   Eigen::MatrixXd et1;
   Eigen::MatrixXd et2;

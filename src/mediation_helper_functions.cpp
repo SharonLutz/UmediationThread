@@ -7,7 +7,8 @@
 #include <RcppEigen.h>
 #include <exception>
 #include <sstream>
-#include  "mediation_helper.hpp"
+#include "mediation_helper.hpp"
+#include "pseudo_dataframe.hpp"
 
 // [[Rcpp::export]]
 void mediate_helper(Rcpp::Environment &env){
@@ -64,4 +65,14 @@ void threaded_mediate_helper(Rcpp::Environment &env, long long int num_threads){
     Rf_error("error in threaded_mediate_helper: Unknown Exception type caught!");
   }
   // Eigen::setNbThreads(0);
+}
+
+// [[Rcpp::export]]
+Eigen::MatrixXd test_pseudo_dataframe(Rcpp::Environment &env, std::string var_name, std::string treat_name, std::string mediator_name){
+  Rcpp::Rcout << var_name << ',' << treat_name << ',' << mediator_name << std::endl;
+  PseudoDataFrame p_df;
+  p_df.initialize_from_env(env, var_name, treat_name, mediator_name);
+  Eigen::MatrixXd result;
+  p_df.flatten_into_model_matrix(result);
+  return result;
 }
