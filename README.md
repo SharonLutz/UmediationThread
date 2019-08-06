@@ -3,8 +3,15 @@ The Umediation R package enables the user to simulate unmeasured confounding in 
 
 ## Installation
 ```
-install.packages("devtools") #The devtools package must be installed first
+# The devtools package must be installed first
+install.packages("devtools") 
 
+# these will fail to install when already loaded, and install_github will sometimes 
+# load these as part of its activity, and will then try to install them if they need 
+# an update for one of the package dependencies
+install.packages(c("Rcpp","RcppEigen", "curl")) 
+
+#finally install UMediation and any remaining dependencies
 devtools::install_github("SharonLutz/Umediation",quiet=T)
 ```
 
@@ -36,7 +43,7 @@ Example Using Rcpp with Eigen and 5 threads:
 testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_cpp = T, num_cores = 5)
 
 ```
-### Important Caveats for the Faster Processing Strategies:
+### Important Considerations for Threading:
 
 It is advisable that you tailor your num_jobs variable to be the # of your CPU cores - 1, at the maximum, to leave 1 core free to handle the original calling R process and any background OS processes. If you use too many threads, your system will become slow and relatively unresponsive and may lock up until the processing completes.
 
@@ -76,6 +83,9 @@ $Warning
 [1] "Warning: correlations are only valid if at least one of the variables is normally distributed."
 
 ```
+
+## Warning: Do not try to access package internals directly or do so at your own risk!
+If you try to run methods/functions that are not exported and intended for end users, and feed these functions environments, parameters, or values that are not correctly formed, it could result in an uncaught or uncatchable C++ exception or segmentation fault. If this occurs, it will kill your R session/terminal and if you were working within RStudio it will probably crash too.
 
 ## Reference
 **Lutz SM**, Thwing A, Schmiege S, Kroehl M, Baker CD, Starling AP, Hokanson JE, Ghosh D. (2017) Examining the Role of Unmeasured Confounding in Mediation Analysis with Genetic and Genomic Applications. *BMC Bioinformatics.* 18(1):344.

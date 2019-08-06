@@ -1,6 +1,7 @@
 #' @import car
 #' @import mediation
 
+#' @export
 Umediation<-function(n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,varA=1,alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,beta0=0,betaA=0,betaM=0,betaI=0,betaC=0,betaU=0,varY=1,alpha=0.05,nSim=250,nBoot=400,seed=1,atreat=1,acontrol=0, use_cpp=F, num_cores=getOption("mediate.threads", default = 1)){
   
   options(mediate.threads = num_cores)
