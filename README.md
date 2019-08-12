@@ -64,7 +64,11 @@ For Windows:
 Opening the start menu and searching for System Information, or running %windir%\system32\msinfo32.exe at the command prompt should open a window giving a system summary. The Row beginning with "Processor" will list your CPU's name and describe the number of physical and logical cores. For our purposes, the number of logical cores is the value for consideration.
 
 For Mac OSX:
-From a terminal: sysctl hw.physicalcpu hw.logicalcpu should show the number of physical and logical cores.
+
+From a terminal: 
+```
+sysctl hw.physicalcpu hw.logicalcpu #should show the number of physical and logical cores.
+```
 
 For linux:
 There is a system file '/proc/cpuinfo' which contains information about the processors available on the system. There should be one entry per logical core.
