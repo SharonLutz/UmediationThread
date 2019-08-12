@@ -2,6 +2,11 @@
 The Umediation R package enables the user to simulate unmeasured confounding in mediation analysis in order to see how the results of the mediation analysis would change in the presence of unmeasured confounding.
 
 ## Installation
+Requirements:
+* R v3.4 or higher
+* You will need the proper compiling tools for your platform.
+  * For Windows (Rtools installer): https://cran.r-project.org/bin/windows/Rtools/
+  * For MacOSX (clang and gfortran): https://cran.r-project.org/bin/macosx/tools/
 ```
 # The devtools package must be installed first
 install.packages("devtools") 
