@@ -59,10 +59,22 @@ betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_cpp = T, num
 ```
 ### Important Considerations for Threading:
 
-It is advisable that you tailor your num_jobs variable to be the # of your CPU cores - 1, at the maximum, to leave 1 core free to handle the original calling R process and any background OS processes. If you use too many threads, your system will become slow and relatively unresponsive and may lock up until the processing completes.
+#### Determining Number of Cores and amount of RAM available on your system:
+For Windows:
+Opening the start menu and searching for System Information, or running %windir%\system32\msinfo32.exe at the command prompt should open a window giving a system summary. The Row beginning with "Processor" will list your CPU's name and describe the number of physical and logical cores. For our purposes, the number of logical cores is the value for consideration.
+
+For Mac OSX:
+From a terminal: sysctl hw.physicalcpu hw.logicalcpu should show the number of physical and logical cores.
+
+For linux:
+There is a system file '/proc/cpuinfo' which contains information about the processors available on the system. There should be one entry per logical core.
+
+#### What to do with this information?
+It is advisable in a standard use case that you tailor your num_jobs variable to be the # of your logical CPU cores - 1, at the maximum, to leave 1 core free to handle the original calling R process and any background OS processes. If you use more procesess or threads than this, your system may become slow and relatively unresponsive and may lock up until the processing completes, and it will likely not benefit from the additional threads in terms of speed improvement. It may actually run slower due to overconsumption of system resources.
 
 ## Output
 For this analysis, we can see that there is not a significant difference in the proportion of simulations for the mediated effect if the unmeasured confounders are included, but there is a large diffence in the inference for the direct effect if these unmeasured confounders are not included in the analysis.
+
 
 ```
 $Results
