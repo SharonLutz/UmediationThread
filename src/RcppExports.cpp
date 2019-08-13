@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // mediate_helper
 void mediate_helper(Rcpp::Environment& env);
-RcppExport SEXP _Umediation_mediate_helper(SEXP envSEXP) {
+RcppExport SEXP _UmediationThread_mediate_helper(SEXP envSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::Environment& >::type env(envSEXP);
@@ -18,7 +18,7 @@ END_RCPP
 }
 // mediate_helper_variable_exporter
 void mediate_helper_variable_exporter(Rcpp::Environment& env);
-RcppExport SEXP _Umediation_mediate_helper_variable_exporter(SEXP envSEXP) {
+RcppExport SEXP _UmediationThread_mediate_helper_variable_exporter(SEXP envSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::Environment& >::type env(envSEXP);
@@ -28,7 +28,7 @@ END_RCPP
 }
 // threaded_mediate_helper
 void threaded_mediate_helper(Rcpp::Environment& env, long long int num_threads);
-RcppExport SEXP _Umediation_threaded_mediate_helper(SEXP envSEXP, SEXP num_threadsSEXP) {
+RcppExport SEXP _UmediationThread_threaded_mediate_helper(SEXP envSEXP, SEXP num_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::Environment& >::type env(envSEXP);
@@ -39,7 +39,7 @@ END_RCPP
 }
 // test_pseudo_dataframe
 Eigen::MatrixXd test_pseudo_dataframe(Rcpp::Environment& env, std::string var_name, std::string treat_name, std::string mediator_name);
-RcppExport SEXP _Umediation_test_pseudo_dataframe(SEXP envSEXP, SEXP var_nameSEXP, SEXP treat_nameSEXP, SEXP mediator_nameSEXP) {
+RcppExport SEXP _UmediationThread_test_pseudo_dataframe(SEXP envSEXP, SEXP var_nameSEXP, SEXP treat_nameSEXP, SEXP mediator_nameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -53,7 +53,7 @@ END_RCPP
 }
 // test
 void test(Rcpp::Environment& env);
-RcppExport SEXP _Umediation_test(SEXP envSEXP) {
+RcppExport SEXP _UmediationThread_test(SEXP envSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::Environment& >::type env(envSEXP);
@@ -63,15 +63,15 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_Umediation_mediate_helper", (DL_FUNC) &_Umediation_mediate_helper, 1},
-    {"_Umediation_mediate_helper_variable_exporter", (DL_FUNC) &_Umediation_mediate_helper_variable_exporter, 1},
-    {"_Umediation_threaded_mediate_helper", (DL_FUNC) &_Umediation_threaded_mediate_helper, 2},
-    {"_Umediation_test_pseudo_dataframe", (DL_FUNC) &_Umediation_test_pseudo_dataframe, 4},
-    {"_Umediation_test", (DL_FUNC) &_Umediation_test, 1},
+    {"_UmediationThread_mediate_helper", (DL_FUNC) &_UmediationThread_mediate_helper, 1},
+    {"_UmediationThread_mediate_helper_variable_exporter", (DL_FUNC) &_UmediationThread_mediate_helper_variable_exporter, 1},
+    {"_UmediationThread_threaded_mediate_helper", (DL_FUNC) &_UmediationThread_threaded_mediate_helper, 2},
+    {"_UmediationThread_test_pseudo_dataframe", (DL_FUNC) &_UmediationThread_test_pseudo_dataframe, 4},
+    {"_UmediationThread_test", (DL_FUNC) &_UmediationThread_test, 1},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_Umediation(DllInfo *dll) {
+RcppExport void R_init_UmediationThread(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

@@ -11,7 +11,7 @@ Umediation(n = 100, Atype = "D", Mtype = "C", Ytype = "C",
   varM = 1, beta0 = 0, betaA = 0, betaM = 0, betaI = 0,
   betaC = 0, betaU = 0, varY = 1, alpha = 0.05, nSim = 250,
   nBoot = 400, seed = 1, atreat = 1, acontrol = 0, use_cpp = F,
-  num_cores = getOption("mediate.threads", default = 1))
+  num_cores = 1)
 }
 \arguments{
 \item{n}{is the sample size of the population that is being simulated.}

@@ -1,4 +1,4 @@
-Package: Umediation
+Package: UmediationThread
 Type: Package
 Title: Runs the Umediation Function 
 Version: 1.0
@@ -23,7 +23,7 @@ RoxygenNote: 6.1.1
 Collate: 
     'ErrorCheck.R'
     'RcppExports.R'
-    'Umediation-package.R'
+    'UmediationThread-package.R'
     'Umediation.R'
     'mediate_with_rcpp.R'
     'pval.R'

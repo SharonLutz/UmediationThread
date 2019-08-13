@@ -2,22 +2,22 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 mediate_helper <- function(env) {
-    invisible(.Call(`_Umediation_mediate_helper`, env))
+    invisible(.Call(`_UmediationThread_mediate_helper`, env))
 }
 
 mediate_helper_variable_exporter <- function(env) {
-    invisible(.Call(`_Umediation_mediate_helper_variable_exporter`, env))
+    invisible(.Call(`_UmediationThread_mediate_helper_variable_exporter`, env))
 }
 
 threaded_mediate_helper <- function(env, num_threads) {
-    invisible(.Call(`_Umediation_threaded_mediate_helper`, env, num_threads))
+    invisible(.Call(`_UmediationThread_threaded_mediate_helper`, env, num_threads))
 }
 
 test_pseudo_dataframe <- function(env, var_name, treat_name, mediator_name) {
-    .Call(`_Umediation_test_pseudo_dataframe`, env, var_name, treat_name, mediator_name)
+    .Call(`_UmediationThread_test_pseudo_dataframe`, env, var_name, treat_name, mediator_name)
 }
 
 test <- function(env) {
-    invisible(.Call(`_Umediation_test`, env))
+    invisible(.Call(`_UmediationThread_test`, env))
 }
 

@@ -17,8 +17,8 @@ install.packages("devtools")
 install.packages(c("Rcpp","RcppEigen", "curl"), quiet=T) 
 # if there is an error you might need to set quiet=F to see more information about it
 
-#finally install UMediation and any remaining dependencies
-devtools::install_github("SharonLutz/Umediation",quiet=T)
+#finally install UMediationThread and any remaining dependencies
+devtools::install_github("SharonLutz/UmediationThread",quiet=T)
 ```
 
 The install process will involve compiling source code. If you are on MacOSX, and do not quiet the build process with quiet=T, this may involve the clang compiler issuing warnings about unknown pragmas similar to the text below. Do not be alarmed if you see these. If there is actually an error, it will be present among the last several messages issued by the compiler.
@@ -31,7 +31,7 @@ Below, we simulate 4 unmeasured confounders U (2 normally distributed and 2 Bern
 ```
 
 
-library(Umediation)
+library(UmediationThread)
 ?Umediation # For details on this function and how to choose input variables
 
 testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
