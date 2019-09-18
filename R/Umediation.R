@@ -1,5 +1,8 @@
 #' @import car
 #' @import mediation
+#' @include generate_data_matrix.R
+#' @include mediate_parallel.R
+#' @include perform_mediation.R
 
 #' @export
 #' @title Umediation
@@ -40,6 +43,9 @@
 #' @param seed sets the seed used for the random generator.
 #' @param atreat sets the treatment group for the exposure A.
 #' @param acontrol sets the control group for the exposure A.
+#' @param use_cpp use RcppEigen (will enable threading if multi-processing is not activated)
+#' @param use_multi_processing use multiple processes
+#' @param num_jobs number of tasks or cores to use
 #' @return The function outputs (1) the proportion of simulations where the average causal mediation effect (ACME) is significant when the model does NOT include U, (2) the proportion of simulations where the ACME is significant when the model includes U, and (3) the proportion of simulations where conclusions based on the ACME match (i.e. the ACME is significant when U is excluded from the model and included in the model or the ACME is not significant when U is excluded from the model and included in the model). The function also outputs (1) the average estimate of the average ACME when U is NOT included in the model, (2) the average ACME when U is included in the model, and (3) the average absolute difference for the ACME when U is included in the model and the ACME when U is excluded from the model. This is given for both the ACME and the average direct effect (ADE). The correlation between variables is also given to show how the change in betas, alphas, and gammas effect the relationship between these variables. Note: correlation is valid if at least on of the variables is normally distributed.
 #' @examples
 #' testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
@@ -54,20 +60,26 @@
 #' interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 #' gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 #' alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
-#' betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400 use_cpp=T, num_cores=7)
+#' betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400 use_cpp=T, num_jobs=7)
 #' 
 #' testM_cpp
 #' @keywords function mediation unmeasured confounding
 #' @section Warning: 
-#' library(mediation) and library(car) are needed to run this function. 
+#' library(mediation), library(car), and library(pbapply) are needed to run this function. 
 Umediation <- function(
-  n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,
-  varA=1,alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,beta0=0,betaA=0,betaM=0,betaI=0,betaC=0,betaU=0,varY=1,alpha=0.05,nSim=250,
-  nBoot=400,seed=1,atreat=1,acontrol=0, use_cpp=F, num_cores=1){
-  if(num_cores > 1 && !use_cpp){
-    stop("incompatible parameters: use_cpp is false, and num_cores > 1")
+  n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",
+  interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,varA=1,
+  alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,
+  beta0=0,betaA=0,betaM=0,betaI=0,betaC=0,betaU=0,varY=1,
+  alpha=0.05,nSim=250,nBoot=400,seed=1,atreat=1,acontrol=0, 
+  use_cpp=F, use_multi_processing=F, num_jobs=1){
+  
+  if(num_jobs < 1){
+    stop("invalid parameter: num_jobs < 1")
   }
-  options(mediate.threads = num_cores)
+  if(num_jobs > 1 && !(use_cpp || use_multi_processing)){
+    stop("incompatible parameters: use_cpp and use_multi_processing, are both false, and num_jobs != 1")
+  }
   
   #######################################
   # Check Input for Errors
@@ -82,174 +94,51 @@ Umediation <- function(
   rownames(Results)<-c("Prop. of simulations w/ significant ACME excluding U","Prop. of simulations w/ significant ACME including U","Prop. of simulations where conclusions based on ACME match","Average ACME excluding U","Average ACME including U","Average absolute difference of ACME including U minus ACME excluding U","Prop. of simulations w/ significant ADE excluding U","Prop. of simulations w/ significant ADE including U","Prop. of simulations where conclusions based on ADE match","Average ADE excluding U","Average ADE including U","Average absolute difference of ADE including U minus ADE excluding U")
   
   #######################################
-  # Loop through all simulations
+  # Create Input Data Matrix
+  #######################################
+  
+  data_matrix_gen = generate_data_matrix(
+    n=n, interact=interact,
+    Atype=Atype,Mtype=Mtype,Ytype=Ytype,Ctype=Ctype,Utype=Utype,
+    muC=muC,muU=muU,varC=varC,varU=varU,varM=varM,varY=varY,
+    alpha0=alpha0,alphaA=alphaA,alphaC=alphaC,alphaU=alphaU,
+    beta0=beta0,betaA=betaA,betaM=betaM,betaI=betaI,betaC=betaC,betaU=betaU,
+    nSim=nSim,seed=seed,nBoot=nBoot
+  )
+  data_matrix = data_matrix_gen$data
+  matC = data_matrix_gen$matC
+  #######################################
+  # Run the mediation and collect the results
+  #######################################
+  
+  if(use_multi_processing){
+    options(mediate.jobs = num_jobs)
+    if(parallel::detectCores() == 1){
+      warning("your machine may not be suitable for multiprocessing, only 1 core was detected")
+    }
+    if(num_jobs < 2){
+      stop("There is no point in using MultiProcessing with less than 2 jobs")
+    }
+    if((nSim / num_jobs) < 1.0){
+      warning(paste("you don't have enough Simulations in nSim:", nSim, " to fully benefit from num_jobs:", num_jobs, sep=""))
+    }
+    result.matrix = mediate_parallel(data_matrix)
+  } else {
+    result.matrix = pbapply::pblapply(data_matrix, perform_mediation)
+    dim(result.matrix) = dim(data_matrix)
+  }
+  rm(data_matrix)
+  
+  #######################################
+  # Loop through the mediation result matrix
   #######################################
   
   for(si in 1:nSim){ #loop through all simulations
-    set.seed(seed+(si-1)) #set the seed to ensure reproducibility
     
-    simStep<-1
-    if(floor(si/simStep)==ceiling(si/simStep)){print(paste("simulation",si, "of",nSim))}
-    
-    #######################################
-    # Generate the unmeasured confounder,
-    # measured confounder C, exposure A,
-    # mediator M, and outcome Y
-    #######################################
-    
-    # generate unmeasured confounder U
-    U<-matrix(0,nrow=n,ncol=length(Utype))
-    for(iu in 1:length(Utype)){
-      if(Utype[iu]=="C"){
-        if(varU[iu]==0|varU[iu]<0){stop(paste("Error: Variance of U",iu," (varU) is 0 or negative.",sep=""))}
-        U[,iu]<-rnorm(n,muU[iu],sqrt(varU[iu]))
-      }
-      if(Utype[iu]=="D"){
-        if(muU[iu]<0|muU[iu]==0|muU[iu]==1|muU[iu]>1){stop(paste("Error: Prob(U",iu,"=1) (i.e. muU",iu,") is less than or equal to zero or greater than or equal to 1.",sep=""))}
-        U[,iu]<-rbinom(n,1,muU[iu])
-      }
-      colnames(U)<-paste("U",length(Utype),Utype,sep="")
-    }
-    
-    # generate measured confounder C
-    CC<-matrix(0,nrow=n,ncol=length(Ctype))
-    for(ic in 1:length(Ctype)){
-      if(Ctype[ic]=="C"){
-        if(varC[ic]==0|varC[ic]<0){stop(paste("Error: Variance of C",ic," (varC) is 0 or negative.",sep=""))}
-        CC[,ic]<-rnorm(n,muC[ic],sqrt(varC[ic]))
-      }
-      if(Ctype[ic]=="D"){
-        if(muC[ic]<0|muC[ic]==0|muC[ic]==1|muC[ic]>1){stop(paste("Error: Prob(C",ic,"=1) is less than or equal to zero or greater than or equal to 1.",sep=""))}
-        CC[,ic]<-rbinom(n,1,muC[ic])
-      }
-      colnames(CC)<-paste("C",length(Ctype),Ctype,sep="")
-    }
-    
-    # generate exposure A as a function of C and U
-    # logit(P(A=1)) or E[A]=gamma0+gammaU*U+gammaC*C
-    muA<-gamma0+CC%*%gammaC+U%*%gammaU
-    if(Atype=="C"){
-      A<-rnorm(n,muA,sqrt(varA)) # normally distributed mediator
-      if(varA==0|varA<0){stop("Error: Variance of M (varM) is 0 or negative.")}
-    }
-    if(Atype=="D"){
-      Ap<-exp(muA)/(1+exp(muA))
-      if(max(Ap)=="NaN"|is.na(max(Ap))){stop("Error: Prob(A=1) is too close to 0 or 1. This can occur if the absolute value of gamma0 is too large.")}
-      A<-rbinom(n,1,Ap)# binary mediator
-      if(length(A[A==1])/length(A)<(2/n)|length(A[A==1])/length(A)>(1-2/n)){
-        stop("Error: there was no enough varaibality in A (i.e. Prob(A=1)=1 or Prob(A=1)=0). Considering increasing the sample size n or using mean centered confounders (i.e. muC=0 and muU=0).")
-      }
-    }
-    
-    # generate mediator M
-    # Logit(P(M=1)) or E[M]=alpha0+alphaA*A+alphaC*C+alphaU*U)
-    muM<-alpha0+alphaA*A+CC%*%alphaC+U%*%alphaU
-    if(Mtype=="C"){
-      M<-rnorm(n,muM,sqrt(varM)) # normally distributed mediator
-      if(varM==0|varM<0){stop("Error: Variance of M (varM) is 0 or negative.")}
-    }
-    if(Mtype=="D"){
-      Mp<-exp(muM)/(1+exp(muM))
-      if(max(Mp)=="NaN"|is.na(max(Mp))){stop("Error: Prob(M=1) is too close to 0 or 1. This can occur if the absolute value of alpha0 is too large.")}
-      M<-rbinom(n,1,Mp)# binary mediator
-      if(length(M[M==1])/length(M)<(5/n)|length(M[M==1])/length(M)>(1-5/n)){
-        stop("Error: there was no enough varaibality in M (i.e. Prob(M=1)=1 or Prob(M=1)=0). Considering increasing the sample size n or using mean centered confounders (i.e. muC=0 and muU=0).")
-      }
-    }
-    
-    
-    # generate outcome Y
-    # logit(P(Y=1)) or E[Y]=beta0+betaA*A+betaM*M+betaC*C+betaU*U
-    if(interact==TRUE){ muY<-beta0+betaA*A+betaM*M+betaI*A*M+CC%*%betaC+U%*%betaU}
-    if(interact==FALSE){ muY<-beta0+betaA*A+betaM*M+CC%*%betaC+U%*%betaU}
-    if(Ytype=="C"){
-      if(varY==0|varY<0){stop("Error: Variance of Y (varY) is 0 or negative.")}
-      Y<-rnorm(n,muY,sqrt(varY)) # normally distributed outcome
-    }
-    if(Ytype=="D"){
-      Yp<-exp(muY)/(1+exp(muY))
-      if(max(Yp)=="NaN"|is.na(max(Yp))){stop("Error: Prob(Y=1) is too close to 0 or 1. This can occur if the absolute value of beta0 is too large.")}
-      Y<-rbinom(n,1,Yp) # binary outcome
-      if(length(Y[Y==1])/length(Y)<(5/n)|length(Y[Y==1])/length(Y)>(1-5/n)){
-        stop("Error: there was no enough varaibality in Y (i.e. Prob(Y=1)=1 or Prob(Y=1)=0). Considering increasing the sample size n or using mean centered confounders (i.e. muC=0 and muU=0).")
-      }
-    }
-    
-    #######################################
-    # Check for collinearity
-    #######################################
-    
-    if(length(Utype)>1|length(Ctype)>1){
-      if(max(vif(lm(Y~A+M+CC+U))[,3])>10 & interact==FALSE ){stop("Error: There is strong evidence of collinearity (i.e. VIF>10) when A,M,C,U are regressed on Y. Consider reducing the absolute value of large gammas, alphas, or betas.")}
-      
-      if(max(vif(lm(Y~A+M+A*M+CC+U))[,3])>10 & interact==TRUE ){stop("Error: There is strong evidence of collinearity (i.e. VIF>10) when A,M,A*M,C,U are regressed on Y. Consider reducing the absolute value of large gammas, alphas, or betas.")}
-      
-      if(max(vif(lm(M~A+CC+U))[,3])>10){stop("Error: There is strong evidence of collinearity (i.e. VIF>10) when A,C,U are regressed on M. Consider reducing the absolute value of large gammas or alphas.")}
-    }
-    
-    if(length(Utype)==1&length(Ctype)==1){
-      if(max(vif(lm(Y~A+M+CC+U)))>10 & interact==FALSE ){stop("Error: There is strong evidence of collinearity (i.e. VIF>10) when A,M,C,U are regressed on Y. Consider reducing the absolute value of large gammas, alphas, or betas.")}
-      
-      if(max(vif(lm(Y~A+M+A*M+CC+U)))>10 & interact==TRUE ){stop("Error: There is strong evidence of collinearity (i.e. VIF>10) when A,M,A*M,C,U are regressed on Y. Consider reducing the absolute value of large gammas, alphas, or betas.")}
-      
-      if(max(vif(lm(M~A+CC+U)))>10){stop("Error: There is strong evidence of collinearity (i.e. VIF>10) when A,C,U are regressed on M. Consider reducing the absolute value of large gammas or alphas.")}
-    }
-    
-    #######################################
-    # Correlation for U,C,A,M,Y
-    #######################################
-    
-    matA<-cbind(A,M,Y,CC,U)
-    matC<-round(cor(matA),digits=2)
-    colnames(matC)<-c("A","M","Y",paste("C",c(1:length(Ctype)),sep=""),paste("U",c(1:length(Utype)),sep=""))
-    rownames(matC)<-c("A","M","Y",paste("C",c(1:length(Ctype)),sep=""),paste("U",c(1:length(Utype)),sep=""))
-    
-    #######################################
-    # Mediation analysis w/ and w/out U
-    #######################################
-    
-    # models without U
-    if(Mtype=="C"){med.fit <-lm(M~A+CC)} #fit the model for the mediator
-    if(Mtype=="D"){med.fit <-glm(M~A+CC,family=binomial(link = "logit"))}
-    if(interact==FALSE){
-      if(Ytype=="C"){out.fit<-lm(Y~M+A+CC)} #fit the model for the outcome
-      if(Ytype=="D"){out.fit<-glm(Y~M+A+CC,family=binomial(link = "logit"))}
-    }
-    if(interact==TRUE){
-      if(Ytype=="C"){out.fit<-lm(Y~M+A+CC+A*M)} #fit the model for the outcome
-      if(Ytype=="D"){out.fit<-glm(Y~M+A+CC+A*M,family=binomial(link = "logit"))}
-    }
-    g_env = globalenv()
-    g_env[["med.fit"]] = med.fit
-    g_env[["out.fit"]] = out.fit
-    if(use_cpp){
-      med.out <- mediate_with_rcpp(med.fit, out.fit, treat = "A", mediator = "M",sim=nBoot)
-    } else {
-      med.out <- mediate(med.fit, out.fit, treat = "A", mediator = "M",sim=nBoot)
-    }
-    
-    
-    # models with U
-    if(Mtype=="C"){med.fitU <-lm(M~A+CC+U)} #fit the model for the mediator
-    if(Mtype=="D"){med.fitU <-glm(M~A+CC+U,family=binomial(link = "logit"))}
-    if(interact==FALSE){
-      if(Ytype=="C"){out.fitU<-lm(Y~M+A+CC+U)} #fit the model for the outcome
-      if(Ytype=="D"){out.fitU<-glm(Y~M+A+CC+U,family=binomial(link = "logit"))}
-    }
-    if(interact==TRUE){
-      if(Ytype=="C"){out.fitU<-lm(Y~M+A+CC+U+A*M)} #fit the model for the outcome
-      if(Ytype=="D"){out.fitU<-glm(Y~M+A+CC+U+A*M,family=binomial(link = "logit"))}
-    }
-    
-    g_env[["med.fitU"]] = med.fitU
-    g_env[["out.fitU"]] = out.fitU
-    
-    if(use_cpp){
-      med.outU <- mediate_with_rcpp(med.fitU, out.fitU, treat = "A", mediator = "M",sim=nBoot)
-    } else {
-      med.outU <- mediate(med.fitU, out.fitU, treat = "A", mediator = "M",sim=nBoot)
-    }
-    
+    # TODO access the med.out/ med.outU values for this simulation
+    result_element = result.matrix[[si]]
+    med.out = result_element$med.out
+    med.outU = result_element$med.outU
     
     #Results
     Results["Average ACME excluding U",1]<-Results["Average ACME excluding U",1]+summary(med.out)$d.avg
@@ -268,8 +157,7 @@ Umediation <- function(
     if(summary(med.outU)$z.avg.p<alpha){Results["Prop. of simulations w/ significant ADE including U",1]<- Results["Prop. of simulations w/ significant ADE including U",1]+1}
     if(((summary(med.out)$z.avg.p<alpha)&(summary(med.outU)$z.avg.p<alpha))|((summary(med.out)$z.avg.p>alpha)&(summary(med.outU)$z.avg.p>alpha))){Results["Prop. of simulations where conclusions based on ADE match",1]<- Results["Prop. of simulations where conclusions based on ADE match",1]+1}
     
-    
-  } #end of simulation loop
+  }
   
   #######################################
   # Results

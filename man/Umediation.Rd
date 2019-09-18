@@ -11,7 +11,7 @@ Umediation(n = 100, Atype = "D", Mtype = "C", Ytype = "C",
   varM = 1, beta0 = 0, betaA = 0, betaM = 0, betaI = 0,
   betaC = 0, betaU = 0, varY = 1, alpha = 0.05, nSim = 250,
   nBoot = 400, seed = 1, atreat = 1, acontrol = 0, use_cpp = F,
-  num_cores = 1)
+  use_multi_processing = F, num_jobs = 1)
 }
 \arguments{
 \item{n}{is the sample size of the population that is being simulated.}
@@ -79,6 +79,12 @@ Umediation(n = 100, Atype = "D", Mtype = "C", Ytype = "C",
 \item{atreat}{sets the treatment group for the exposure A.}
 
 \item{acontrol}{sets the control group for the exposure A.}
+
+\item{use_cpp}{use RcppEigen (will enable threading if multi-processing is not activated)}
+
+\item{use_multi_processing}{use multiple processes}
+
+\item{num_jobs}{number of tasks or cores to use}
 }
 \value{
 The function outputs (1) the proportion of simulations where the average causal mediation effect (ACME) is significant when the model does NOT include U, (2) the proportion of simulations where the ACME is significant when the model includes U, and (3) the proportion of simulations where conclusions based on the ACME match (i.e. the ACME is significant when U is excluded from the model and included in the model or the ACME is not significant when U is excluded from the model and included in the model). The function also outputs (1) the average estimate of the average ACME when U is NOT included in the model, (2) the average ACME when U is included in the model, and (3) the average absolute difference for the ACME when U is included in the model and the ACME when U is excluded from the model. This is given for both the ACME and the average direct effect (ADE). The correlation between variables is also given to show how the change in betas, alphas, and gammas effect the relationship between these variables. Note: correlation is valid if at least on of the variables is normally distributed.
@@ -104,7 +110,7 @@ testM_cpp<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D")
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
-betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400 use_cpp=T, num_cores=7)
+betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400 use_cpp=T, num_jobs=7)
 
 testM_cpp
 }
