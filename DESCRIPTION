@@ -16,7 +16,8 @@ Depends: R (>= 3.5.1)
 Imports: 
     car,
     mediation,
-    Rcpp
+    Rcpp,
+    pbapply
 URL: https://github.com/SharonLutz/Umediation
 BugReports: https://github.com/SharonLutz/Umediation/issues
 RoxygenNote: 6.1.1
