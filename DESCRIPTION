@@ -17,7 +17,8 @@ Imports:
     car,
     mediation,
     Rcpp,
-    pbapply
+    pbapply,
+    snow
 URL: https://github.com/SharonLutz/Umediation
 BugReports: https://github.com/SharonLutz/Umediation/issues
 RoxygenNote: 6.1.1
