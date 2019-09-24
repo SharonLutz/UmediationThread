@@ -1,13 +1,14 @@
 #' @import car
 #' @import mediation
+#' @import pbapply
 #' @include generate_data_matrix.R
 #' @include mediate_parallel.R
 #' @include perform_mediation.R
 
 #' @export
-#' @title Umediation
-#' @name Umediation
-#' @aliases Umediation
+#' @title UmediationThread
+#' @name UmediationThread
+#' @aliases UmediationThread
 #' @description The Umediation function examines the role of unmeasured confounding on the estimates for the average causal mediated effect (ACME) and average direct effect (ADE) in mediation analysis. User input specifies the relationship between the exposure A, the mediator M, the outcome Y, the measured confounder C, and the unmeasured confounder U. The function runs mediation analysis including and excluding the unmeasured confounder U in the model. Umediation allows the user to examine how the results of the mediation analysis would change if the unmeasured confounder U was included or not included in the model. The function allows for continuous or dichotomous exposure A, mediator M, outcome Y, measured confounder C, and unmeasured confounder U. Umediation allows for multiple measured confounders C and unmeasured confounders U. In addition, Umediation allows for an interaction between the exposure A and the mediator M on the outcome Y.
 #' @author Sharon Lutz, Michael Gooch
 #' @param n is the sample size of the population that is being simulated.
@@ -48,7 +49,7 @@
 #' @param num_jobs number of tasks or cores to use
 #' @return The function outputs (1) the proportion of simulations where the average causal mediation effect (ACME) is significant when the model does NOT include U, (2) the proportion of simulations where the ACME is significant when the model includes U, and (3) the proportion of simulations where conclusions based on the ACME match (i.e. the ACME is significant when U is excluded from the model and included in the model or the ACME is not significant when U is excluded from the model and included in the model). The function also outputs (1) the average estimate of the average ACME when U is NOT included in the model, (2) the average ACME when U is included in the model, and (3) the average absolute difference for the ACME when U is included in the model and the ACME when U is excluded from the model. This is given for both the ACME and the average direct effect (ADE). The correlation between variables is also given to show how the change in betas, alphas, and gammas effect the relationship between these variables. Note: correlation is valid if at least on of the variables is normally distributed.
 #' @examples
-#' testM<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
+#' testM<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
 #' interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 #' gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 #' alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
@@ -56,7 +57,7 @@
 #' 
 #' testM
 #' 
-#' testM_cpp<- Umediation(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
+#' testM_cpp<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
 #' interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 #' gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 #' alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
@@ -66,7 +67,7 @@
 #' @keywords function mediation unmeasured confounding
 #' @section Warning: 
 #' library(mediation), library(car), and library(pbapply) are needed to run this function. 
-Umediation <- function(
+UmediationThread <- function(
   n=100,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",
   interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,gammaU=0,varA=1,
   alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,
