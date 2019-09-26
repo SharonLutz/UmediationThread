@@ -1,6 +1,3 @@
-
-
-#' @export
 ErrorCheck<-function(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype="C",Utype="C",
                      interact=FALSE,muC=0,varC=1,muU=0,varU=1,gamma0=0,gammaC=0,
                      gammaU=0,varA=1,alpha0=0,alphaA=0,alphaC=0,alphaU=0,varM=1,
