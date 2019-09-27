@@ -26,13 +26,20 @@ The install process will involve compiling source code. If you are on MacOSX, an
 ```
 warning: pragma diagnostic pop could not pop, no matching push [-Wunknown-pragmas]
 ```
+
+## Speeding things up with MultiProcessing And/Or Use of Threading and Eigen via C++
+the Umediation command accepts the following parameters:
+* use_multi_processing, a boolean (T, F, True, or False), which turns on the multi-processing feature
+* use_cpp, a boolean(T, F, True, or False), which activates the use of Rcpp RcppEigen, and threading if multiprocessing is not turned on as well..
+* num_jobs, an integer specifying the number of processes or cpus/threads you wish to use.
+
 ## Example
 Below, we simulate 4 unmeasured confounders U (2 normally distributed and 2 Bernouilli distributed random variables) on the binary exposure, A, normally distributed mediator, M, and normally distributed outcome Y adjusted for one normally distributed covariate and 2 binary distributed covariates.
 ```
-
-
 library(UmediationThread)
 ?UmediationThread # For details on this function and how to choose input variables
+
+#Example Using vanilla R, (no RCpp with Eigen and No Multiprocessing)
 
 testM<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
@@ -42,20 +49,15 @@ betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400)
 
 testM
 
-```
-## Speed up mediation with Threading and Eigen via C++
-the Umediation command accepts the following parameters:
-* use_multi_processing, a boolean (T, F, True, or False), which turns on the multi-processing feature
-* use_cpp, a boolean(T, F, True, or False), which activates the use of Rcpp RcppEigen, and threading if multiprocessing is not turned on as well..
-* num_jobs, an integer specifying the number of processes or cpus/threads you wish to use.
-```
+
 #Example Using Rcpp with Eigen and 5 threads:
 
 testM1<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
-betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_cpp = T, num_jobs = 5)
+betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, 
+use_cpp = T, num_jobs = 5)
 
 testM1
 
@@ -66,7 +68,8 @@ testM2<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
-betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_multi_processing = T, num_jobs = 5)
+betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, 
+use_multi_processing = T, num_jobs = 5)
 
 testM2
 
@@ -77,7 +80,8 @@ testM3<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
 gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
 alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
-betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_multi_processing = T, use_cpp = T, num_jobs = 5)
+betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, 
+use_multi_processing = T, use_cpp = T, num_jobs = 5)
 
 testM3
 
