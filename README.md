@@ -45,8 +45,9 @@ testM
 ```
 ## Speed up mediation with Threading and Eigen via C++
 the Umediation command accepts the following parameters:
-* use_cpp, a boolean(T, F, True, or False), which activates the use of Rcpp RcppEigen, and threading.
-* num_jobs, an integer specifying the number of cpus/threads you wish to use.
+* use_multi_processing, a boolean (T, F, True, or False), which turns on the multi-processing feature
+* use_cpp, a boolean(T, F, True, or False), which activates the use of Rcpp RcppEigen, and threading if multiprocessing is not turned on as well..
+* num_jobs, an integer specifying the number of processes or cpus/threads you wish to use.
 ```
 Example Using Rcpp with Eigen and 5 threads:
 
