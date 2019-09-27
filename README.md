@@ -88,12 +88,16 @@ testM3
 For Windows:
 Opening the start menu and searching for System Information, or running %windir%\system32\msinfo32.exe at the command prompt should open a window giving a system summary. The Row beginning with "Processor" will list your CPU's name and describe the number of physical and logical cores. For our purposes, the number of logical cores is the value for consideration.
 
+Additionally, the rows containing the entries "Total Physical Memory" and "Available Physical Memory" will help you when determining how many processes you can run safely in multiprocessing mode. You can also benefit from the use of Task Manager. Ctrl-Alt-Esc or Ctrl-Alt-Del can be used to bring up Task manager depending on your version of Windows. 
+
 
 For Mac OSX:
 
 From a terminal: 
 ```
 sysctl hw.physicalcpu hw.logicalcpu #should show the number of physical and logical cores.
+
+sysctl hw.memsize #displays the total available memory.
 ```
 
 For linux:
