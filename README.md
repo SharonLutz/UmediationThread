@@ -32,7 +32,7 @@ Below, we simulate 4 unmeasured confounders U (2 normally distributed and 2 Bern
 
 
 library(UmediationThread)
-?Umediation # For details on this function and how to choose input variables
+?UmediationThread # For details on this function and how to choose input variables
 
 testM<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
