@@ -32,7 +32,7 @@ Below, we simulate 4 unmeasured confounders U (2 normally distributed and 2 Bern
 
 
 library(UmediationThread)
-?Umediation # For details on this function and how to choose input variables
+?UmediationThread # For details on this function and how to choose input variables
 
 testM<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
 interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
@@ -56,12 +56,39 @@ gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.
 alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
 betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_cpp = T, num_jobs = 5)
 
+
+Example using MultiProcessing with 5 jobs
+
+testM<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
+interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
+gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
+alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
+betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_multi_processing = T, num_jobs = 5)
+
+
+Example using Rcpp with Eigen AND MultiProcessing with 5 jobs
+
+testM<- UmediationThread(n=1000,Atype="D",Mtype="C",Ytype="C",Ctype=c("C","D","D"),Utype=c("C","D","D","C"),
+interact=TRUE,muC=c(0.1,0.3,0.2),varC=c(1,1,1),muU=c(.1,0.3,0.2,.1),varU=c(1,1,1,1),gamma0=0,
+gammaC=c(1,0.3,0.2),gammaU=c(1,0.3,0.2,0.4),varA=1,alpha0=0,alphaA=1,alphaC=c(0.3,0.2,0.2),
+alphaU=c(0.3,0.2,0.3,0.2),varM=1,beta0=0,betaA=-1,betaM=1,betaI=1,betaC=c(0.3,0.2,0.1),
+betaU=c(0.3,0.2,-1.3,0.2),varY=1,alpha=0.05,nSim=100,nBoot=400, use_multi_processing = T, use_cpp = T, num_jobs = 5)
+
 ```
-### Important Considerations for Threading:
+### Important Considerations for Threading and MultiProcessing:
 
 #### Determining Number of Cores and amount of RAM available on your system:
 For Windows:
 Opening the start menu and searching for System Information, or running %windir%\system32\msinfo32.exe at the command prompt should open a window giving a system summary. The Row beginning with "Processor" will list your CPU's name and describe the number of physical and logical cores. For our purposes, the number of logical cores is the value for consideration.
+
+#### Multiprocessing Consumes More Memory and Spawns Extra R Processes
+If you use multi-processing several instances of the R interpreter will be spawned, either via Forking (copying the entire R process and all objects in memory into a sub-process) or simply spawning a new R instance and initializing it by loading the required libraries.
+
+Each instance will be executing the mediation function on a subset of the simulated data and linear models, so in addition to the overhead of having several instances of R, and possibly the data in your environment copied due to using forking, you'll also be consuming the memory required for the mediation function across each process. So be sure to pay attention to system resource consumption if your parameters call for a lot of data to be generated across all of the jobs as well as per-job. 
+
+For most use cases you will probably be able to make use of multiprocessing, but if your parameters will tip the scales in terms of memory consumption, you might be better off simply using Rcpp with Eigen without activating multiprocessing and make use of the speed boosts gained via threading with a smaller memory footprint.
+
+The input parameters n, nSim, and the length of the inputs related to the variables (A, M, Y, C, and U) all impact the amount of memory consumed.
 
 For Mac OSX:
 
